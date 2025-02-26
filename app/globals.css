@@ -43,7 +43,7 @@
   --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
   --sidebar-border: oklch(0.928 0.006 264.531);
   --sidebar-ring: oklch(0.872 0.01 258.338);
-  
+
   /* RGB values for gradient effects - adjusted for better harmony */
   --primary-rgb: 79, 84, 141; /* Slightly muted for better harmony */
   --blue-rgb: 79, 134, 236;   /* More soft blue */
@@ -84,7 +84,7 @@
   --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
   --sidebar-border: oklch(0.278 0.033 256.848);
   --sidebar-ring: oklch(0.446 0.03 256.802);
-  
+
   /* Dark mode RGB values - adjusted for better harmony */
   --primary-rgb: 149, 165, 232; /* Softer blue */
   --blue-rgb: 116, 175, 245;    /* Less bright blue */
@@ -249,59 +249,20 @@
   background-size: 24px 24px;
 }
 
-/* Improved radial gradient with softer transition */
+/* Radial gradient for feature section */
 .radial-gradient-ellipse {
-  background-image: radial-gradient(ellipse at center, 
-    rgba(var(--primary-rgb), 0.1) 0%, 
-    rgba(var(--primary-rgb), 0.05) 40%,
-    rgba(var(--primary-rgb), 0) 70%);
+  background-image: radial-gradient(
+    ellipse at center,
+    rgba(var(--primary-rgb), 0.15) 0%,
+    rgba(var(--primary-rgb), 0) 70%
+  );
 }
 
-/* Button and interactive element styling - softer effects */
-.interactive-blur {
-  backdrop-filter: blur(8px);
-  transition: all 0.4s ease;
-}
-
-.interactive-blur:hover {
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.15);
-}
-
-/* Gradient borders - smoother transitions */
-.gradient-border {
-  position: relative;
-  isolation: isolate;
-}
-
-.gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, 
-    rgba(var(--primary-rgb), 0.7) 0%,
-    rgba(var(--blue-rgb), 0.6) 50%,
-    rgba(var(--purple-rgb), 0.5) 100%);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  z-index: -1;
-  opacity: 0.8;
-}
-
-/* Enhanced gradient text animation - smoother color transitions */
-.gradient-text-alt {
-  background: linear-gradient(135deg, 
-    rgba(var(--primary-rgb), 1) 0%,
-    rgba(var(--blue-rgb), 1) 30%,
-    rgba(var(--purple-rgb), 1) 70%,
-    rgba(var(--primary-rgb), 1) 100%);
+/* Graduate text effect */
+.graduate-text {
+  background: linear-gradient(to right, var(--primary), #4f46e5);
   -webkit-background-clip: text;
   color: transparent;
-  background-size: 300% 100%;
+  background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }

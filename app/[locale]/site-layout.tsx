@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Toaster } from "sonner";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 interface SiteLayoutProps {
   children: ReactNode;

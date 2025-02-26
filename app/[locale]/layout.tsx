@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { NextIntlProvider } from "@/lib/i18n/provider";
 import { locales } from "@/lib/i18n/locales";
 import { SiteLayout } from "./site-layout";
+import { defaultMetadata, viewport } from "./metadata";
+import { Metadata } from "next";
 
 // Import messages
 import enMessages from "@/lib/i18n/messages/en.json";
@@ -11,6 +13,12 @@ const messages: Record<string, any> = {
   en: enMessages,
   vi: viMessages,
 };
+
+// Metadata cho layout
+export const metadata: Metadata = defaultMetadata;
+
+// Export viewport
+export { viewport };
 
 export default async function LocaleLayout({
   children,
