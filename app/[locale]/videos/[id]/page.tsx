@@ -1,177 +1,452 @@
-import { Metadata } from "next";
-import { generateMetadata } from "@/app/[locale]/metadata";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter, useParams } from "next/navigation";
 import { VideoPlayer } from "@/components/videos/VideoPlayer";
-import { VideoDetails } from "@/components/videos/VideoDetails";
 import { DetectionResults } from "@/components/videos/DetectionResults";
-import { RelatedVideos } from "@/components/videos/RelatedVideos";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth/AuthContext";
+import {
+  getVideoById,
+  getVideoStreamUrls,
+  Video,
+  VideoStreamUrls,
+  getVideoDownloadUrl,
+  getVideoDetections,
+} from "@/lib/api/videoService";
+import { formatDistanceToNow } from "date-fns";
+import { enUS, vi } from "date-fns/locale";
+import { formatBytes } from "@/lib/utils";
+import {
+  Download,
+  FileVideo,
+  Clock,
+  Calendar,
+  Info,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 
 interface VideoPageProps {
   params: {
-    id: string;
     locale: string;
+    id: string;
   };
 }
 
-export async function generateVideoMetadata({
-  params,
-}: VideoPageProps): Promise<Metadata> {
-  // Trong thực tế, bạn sẽ fetch dữ liệu video từ API
-  const videoTitle = "Football Match Highlights";
-  return generateMetadata({
-    title: `${videoTitle} - Football Detection`,
-    description: "Xem phân tích chi tiết về trận đấu bóng đá với công nghệ AI",
-    path: `/videos/${params.id}`,
-    locale: params.locale,
-  });
+interface Detection {
+  id: string;
+  objectType: string;
+  confidence: number;
+  timestamp: string;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  frameNumber: number;
 }
 
-export default async function VideoPage({ params }: VideoPageProps) {
-  // Trong thực tế, bạn sẽ fetch dữ liệu video từ API
-  const videoData = {
-    id: params.id,
-    title: "Football Match Highlights",
-    description:
-      "This is a detailed analysis of the football match between Team A and Team B. The video shows key moments, player movements, and tactical analysis.\n\nThe detection model has identified players, ball, and referee positions throughout the match.",
-    uploadDate: "2023-11-15T10:30:00Z",
-    views: 1250,
-    likes: 87,
-    status: "completed" as const,
-    tags: ["football", "analysis", "AI detection", "highlights"],
-    videoUrl: "https://example.com/videos/sample.mp4",
-    thumbnailUrl: "/images/video-thumbnail.jpg",
-    user: {
-      id: "user123",
-      name: "Sports Analyzer",
-      avatar: "/images/user-avatar.jpg",
-    },
+export default function VideoPage({ params }: VideoPageProps) {
+  const { locale, id } = useParams();
+  const t = useTranslations();
+  const router = useRouter();
+  const { token } = useAuth();
+
+  const [video, setVideo] = useState<Video | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [streamUrls, setStreamUrls] = useState<VideoStreamUrls | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [detections, setDetections] = useState<Detection[]>([]);
+  const [isLoadingDetections, setIsLoadingDetections] = useState(false);
+
+  useEffect(() => {
+    const fetchVideo = async () => {
+      if (!token) return;
+
+      try {
+        setIsLoading(true);
+        const videoData = await getVideoById(id as string, token);
+        setVideo(videoData);
+
+        // Lấy URL stream video
+        const urls = await getVideoStreamUrls(id as string, token);
+        setStreamUrls(urls);
+
+        // Nếu video đã xử lý xong, lấy kết quả phát hiện
+        if (videoData.status === "completed") {
+          setIsLoadingDetections(true);
+          try {
+            const detectionsData = await getVideoDetections(
+              id as string,
+              token
+            );
+            setDetections(detectionsData);
+          } catch (detectionErr) {
+            console.error("Error fetching detections:", detectionErr);
+            toast.error(t("videoDetails.detectionsError"));
+          } finally {
+            setIsLoadingDetections(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching video:", err);
+        setError(t("videoDetails.notFound"));
+        toast.error(t("videoDetails.notFound"));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVideo();
+  }, [id, token, t]);
+
+  // Xác định locale cho date-fns
+  const dateLocale = (locale as string) === "vi" ? vi : enUS;
+
+  // Hiển thị loading state
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="grid grid-cols-1 gap-8">
+          <Skeleton className="w-full aspect-video rounded-lg" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Hiển thị lỗi
+  if (error || !video) {
+    return (
+      <div className="container py-8">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <h1 className="text-2xl font-bold mb-4">
+              {t("videoDetails.notFound")}
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              {t("videoDetails.notFoundDescription")}
+            </p>
+            <Button onClick={() => router.push(`/${locale}/upload`)}>
+              {t("common.backToVideos")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Hiển thị trạng thái video
+  const renderStatusBadge = () => {
+    switch (video.status) {
+      case "pending":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+          >
+            {t("videoStatus.pending")}
+          </Badge>
+        );
+      case "processing":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+          >
+            {t("videoStatus.processing")}
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+          >
+            {t("videoStatus.completed")}
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+          >
+            {t("videoStatus.failed")}
+          </Badge>
+        );
+      default:
+        return null;
+    }
   };
 
-  // Dữ liệu phát hiện mẫu
-  const detectionData = [
-    {
-      id: "1",
-      timestamp: "2023-11-15T10:30:15Z",
-      objectType: "player",
-      confidence: 0.95,
-      boundingBox: { x: 120, y: 80, width: 50, height: 100 },
-      frameNumber: 450,
-    },
-    {
-      id: "2",
-      timestamp: "2023-11-15T10:30:22Z",
-      objectType: "ball",
-      confidence: 0.88,
-      boundingBox: { x: 350, y: 200, width: 20, height: 20 },
-      frameNumber: 660,
-    },
-    {
-      id: "3",
-      timestamp: "2023-11-15T10:30:35Z",
-      objectType: "referee",
-      confidence: 0.92,
-      boundingBox: { x: 400, y: 150, width: 45, height: 90 },
-      frameNumber: 1050,
-    },
-    {
-      id: "4",
-      timestamp: "2023-11-15T10:30:48Z",
-      objectType: "player",
-      confidence: 0.97,
-      boundingBox: { x: 200, y: 120, width: 50, height: 100 },
-      frameNumber: 1440,
-    },
-    {
-      id: "5",
-      timestamp: "2023-11-15T10:31:02Z",
-      objectType: "ball",
-      confidence: 0.91,
-      boundingBox: { x: 280, y: 180, width: 20, height: 20 },
-      frameNumber: 1860,
-    },
-    {
-      id: "6",
-      timestamp: "2023-11-15T10:31:15Z",
-      objectType: "player",
-      confidence: 0.94,
-      boundingBox: { x: 320, y: 90, width: 50, height: 100 },
-      frameNumber: 2250,
-    },
-    {
-      id: "7",
-      timestamp: "2023-11-15T10:31:28Z",
-      objectType: "goal",
-      confidence: 0.89,
-      boundingBox: { x: 500, y: 150, width: 100, height: 80 },
-      frameNumber: 2640,
-    },
-    {
-      id: "8",
-      timestamp: "2023-11-15T10:31:35Z",
-      objectType: "player",
-      confidence: 0.96,
-      boundingBox: { x: 150, y: 110, width: 50, height: 100 },
-      frameNumber: 2850,
-    },
-  ];
+  // Xử lý tải xuống video
+  const handleDownload = async (processed: boolean) => {
+    if (!token) {
+      toast.error(t("common.error"));
+      return;
+    }
 
-  // Dữ liệu video liên quan mẫu
-  const relatedVideos = [
-    {
-      id: "vid1",
-      title: "Team A vs Team C Highlights",
-      uploadDate: "2023-11-10T14:20:00Z",
-      duration: "5:25",
-      thumbnail: "/images/related-1.jpg",
-      views: 980,
-    },
-    {
-      id: "vid2",
-      title: "Football Tactics Analysis",
-      uploadDate: "2023-11-05T09:15:00Z",
-      duration: "10:12",
-      thumbnail: "/images/related-2.jpg",
-      views: 1450,
-    },
-    {
-      id: "vid3",
-      title: "Player Performance Review",
-      uploadDate: "2023-10-28T16:40:00Z",
-      duration: "7:08",
-      thumbnail: "/images/related-3.jpg",
-      views: 2100,
-    },
-    {
-      id: "vid4",
-      title: "Season Highlights Compilation",
-      uploadDate: "2023-10-15T11:30:00Z",
-      duration: "14:05",
-      thumbnail: "/images/related-4.jpg",
-      views: 3250,
-    },
-  ];
+    try {
+      // Hiển thị thông báo đang tải xuống
+      toast.loading(t("video.download.downloading"));
+
+      // Sử dụng URL không có token
+      const downloadUrl = getVideoDownloadUrl(video.id, processed);
+
+      // Sử dụng fetch với header Authorization
+      const response = await fetch(downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      // Lấy blob từ response
+      const blob = await response.blob();
+
+      // Tạo URL cho blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Tạo link tải xuống
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = processed
+        ? `processed_${video.original_filename}`
+        : video.original_filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Dọn dẹp
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Hiển thị thông báo thành công
+      toast.success(t("video.download.success"));
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error(t("video.download.error"));
+    }
+  };
+
+  // Xác định URL video để phát
+  const videoToPlay =
+    video.status === "completed" && streamUrls?.processed_url
+      ? streamUrls.processed_url
+      : streamUrls?.original_url || "";
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <VideoPlayer
-            videoUrl={videoData.videoUrl}
-            poster={videoData.thumbnailUrl}
-            title={videoData.title}
-          />
-
-          <VideoDetails video={videoData} locale={params.locale} />
-
-          <DetectionResults detections={detectionData} videoId={params.id} />
+    <div className="container py-8">
+      <div className="grid grid-cols-1 gap-8">
+        {/* Video Player */}
+        <div className="w-full rounded-lg overflow-hidden">
+          {streamUrls && (
+            <VideoPlayer
+              videoUrl={videoToPlay}
+              title={video.title}
+              poster={video.status === "pending" ? undefined : undefined}
+            />
+          )}
         </div>
 
+        {/* Video Info */}
         <div className="space-y-6">
-          <RelatedVideos
-            videos={relatedVideos}
-            currentVideoId={params.id}
-            locale={params.locale}
-            isLoading={false}
-          />
+          <div>
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">{video.title}</h1>
+              {renderStatusBadge()}
+            </div>
+            <div className="flex items-center mt-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4 mr-1" />
+              {formatDistanceToNow(new Date(video.created_at), {
+                addSuffix: true,
+                locale: dateLocale,
+              })}
+            </div>
+          </div>
+
+          {/* Detection Results */}
+          {video.status === "completed" && (
+            <div className="mt-8">
+              {isLoadingDetections ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                    <p>{t("videoDetails.loadingDetections")}</p>
+                  </CardContent>
+                </Card>
+              ) : detections.length > 0 ? (
+                <DetectionResults
+                  detections={detections}
+                  videoId={video.id}
+                  videoUrl={videoToPlay}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <p className="text-muted-foreground">
+                      {t("videoDetails.noDetections")}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Video Metadata */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold mb-4">
+                {t("videoDetails.metadata")}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <FileVideo className="h-5 w-5 mr-2 text-muted-foreground" />
+                  <span className="font-medium mr-2">
+                    {t("videoDetails.filename")}:
+                  </span>
+                  <span className="text-sm truncate">
+                    {video.original_filename}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Info className="h-5 w-5 mr-2 text-muted-foreground" />
+                  <span className="font-medium mr-2">
+                    {t("videoDetails.fileSize")}:
+                  </span>
+                  <span>{formatBytes(video.file_size)}</span>
+                </div>
+                {video.video_metadata && (
+                  <>
+                    <div className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-muted-foreground" />
+                      <span className="font-medium mr-2">
+                        {t("videoDetails.duration")}:
+                      </span>
+                      <span>{video.video_metadata.duration}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Info className="h-5 w-5 mr-2 text-muted-foreground" />
+                      <span className="font-medium mr-2">
+                        {t("videoDetails.resolution")}:
+                      </span>
+                      <span>
+                        {video.video_metadata.width} x{" "}
+                        {video.video_metadata.height}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Info className="h-5 w-5 mr-2 text-muted-foreground" />
+                      <span className="font-medium mr-2">
+                        {t("videoDetails.fps")}:
+                      </span>
+                      <span>{video.video_metadata.fps}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Info className="h-5 w-5 mr-2 text-muted-foreground" />
+                      <span className="font-medium mr-2">
+                        {t("videoDetails.frames")}:
+                      </span>
+                      <span>{video.video_metadata.frame_count}</span>
+                    </div>
+                  </>
+                )}
+                {video.processing_started_at && (
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 mr-2 text-muted-foreground" />
+                    <span className="font-medium mr-2">
+                      {t("videoDetails.processingStarted")}:
+                    </span>
+                    <span>
+                      {new Date(video.processing_started_at).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {video.processing_completed_at && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2 text-muted-foreground" />
+                    <span className="font-medium mr-2">
+                      {t("videoDetails.processingCompleted")}:
+                    </span>
+                    <span>
+                      {new Date(video.processing_completed_at).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {video.error_message && (
+                  <div className="flex items-start col-span-2">
+                    <XCircle className="h-5 w-5 mr-2 text-red-500 mt-0.5" />
+                    <div>
+                      <span className="font-medium mr-2">
+                        {t("videoDetails.errorMessage")}:
+                      </span>
+                      <span className="text-red-500">
+                        {video.error_message}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Video Description */}
+          {video.description && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold mb-2">
+                  {t("videoDetails.description")}
+                </h2>
+                <div className="text-sm whitespace-pre-line">
+                  {video.description}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Video Actions */}
+          <div className="flex flex-wrap gap-4">
+            <Button
+              onClick={() => handleDownload(false)}
+              className="flex items-center"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("videoDetails.downloadOriginal")}
+            </Button>
+
+            {video.status === "completed" && video.processed_filename && (
+              <Button
+                onClick={() => handleDownload(true)}
+                variant="outline"
+                className="flex items-center"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t("videoDetails.downloadProcessed")}
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/${locale}/upload`)}
+            >
+              {t("common.backToVideos")}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

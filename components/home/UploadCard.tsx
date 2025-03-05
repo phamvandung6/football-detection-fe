@@ -94,7 +94,7 @@ export default function UploadCard({ variants }: UploadCardProps) {
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold">{t("dashboard.uploadVideo")}</h2>
+            <h2 className="text-2xl font-bold">{t("upload.title")}</h2>
             <p className="text-muted-foreground">
               {t("video.upload.dragDrop")}
             </p>

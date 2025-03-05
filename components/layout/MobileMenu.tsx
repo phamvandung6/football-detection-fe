@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { NavLinks } from "./NavLinks";
 import { UserMenu } from "./UserMenu";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface MobileMenuProps {
   locale: string;
@@ -12,6 +13,8 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ locale, isOpen, onClose }: MobileMenuProps) {
+  const { isAuthenticated } = useAuth();
+
   // Close menu when screen size changes to desktop
   useEffect(() => {
     const handleResize = () => {

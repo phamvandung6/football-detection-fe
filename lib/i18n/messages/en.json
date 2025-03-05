@@ -52,7 +52,8 @@
     "docs": "Documentation",
     "savePreferences": "Save Preferences",
     "saving": "Saving...",
-    "daysAgo": "days ago"
+    "daysAgo": "days ago",
+    "backToHome": "Back to Home"
   },
   "auth": {
     "login": "Login",
@@ -76,7 +77,13 @@
     "resetLinkSentDescription": "If an account exists with that email, we've sent a password reset link. Please check your inbox.",
     "checkYourEmail": "Check Your Email",
     "rememberPassword": "Remember your password?",
-    "backToLogin": "Back to Login"
+    "backToLogin": "Back to Login",
+    "emailRequired": "Email is required",
+    "passwordRequired": "Password is required",
+    "nameRequired": "Name is required",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "resetLinkError": "Failed to send reset link"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -138,20 +145,48 @@
     "uploadFirst": "Upload your first video to get started",
     "viewUploads": "View your uploads"
   },
+  "home": {
+    "title": "Home",
+    "subtitle": "Football video processing with AI",
+    "description": "Upload and analyze your football videos with advanced AI detection"
+  },
+  "videos": {
+    "title": "Videos",
+    "subtitle": "Browse and manage your videos",
+    "description": "View all your uploaded and processed videos"
+  },
+  "upload": {
+    "title": "Upload Video",
+    "subtitle": "Upload a new video for processing",
+    "description": "Upload your football videos for AI analysis and detection",
+    "myVideos": "My Videos",
+    "newVideo": "New Video"
+  },
   "video": {
+    "play": "Play",
+    "pause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "loading": "Loading...",
+    "share": "Share",
+    "download": "Download",
+    "like": "Like",
+    "unlike": "Unlike",
     "upload": {
       "title": "Upload Video",
-      "dragDrop": "Drag and drop your video here, or click to browse",
-      "requirements": "Requirements: MP4 (H.264), 720p-1080p, max 3 minutes, max 50MB",
-      "selectSegment": "Select a segment (max 3 minutes)",
+      "upload": "Upload",
       "uploading": "Uploading...",
+      "dragDrop": "Drag and drop your video here or click to browse",
+      "requirements": "MP4 format, maximum 50MB",
+      "file": "Video File",
+      "invalidFormat": "Invalid file format. Only MP4 videos are supported.",
+      "tooLarge": "File is too large. Maximum size is 50MB.",
+      "noFileSelected": "Please select a video file",
+      "titleRequired": "Title is required",
       "uploadSuccess": "Video uploaded successfully",
-      "uploadError": "Error uploading video",
-      "invalidFormat": "Invalid video format. Please upload an MP4 file.",
-      "tooLarge": "Video is too large. Maximum size is 50MB.",
-      "tooLong": "Video is too long. Maximum duration is 3 minutes.",
-      "retry": "Retry Upload",
-      "noFileSelected": "No file selected"
+      "uploadError": "Failed to upload video"
     },
     "processing": {
       "title": "Processing Video",
@@ -165,22 +200,38 @@
       "failed": "Processing Failed",
       "retry": "Retry Processing"
     },
-    "play": "Play",
-    "pause": "Pause",
-    "mute": "Mute",
-    "unmute": "Unmute",
-    "enterFullscreen": "Enter fullscreen",
-    "exitFullscreen": "Exit fullscreen",
-    "shareVideo": "Share Video",
+    "delete": {
+      "confirmTitle": "Delete Video",
+      "confirmDescription": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+      "success": "Video deleted successfully",
+      "error": "Failed to delete video",
+      "deleting": "Deleting..."
+    },
+    "list": {
+      "title": "My Videos",
+      "viewDetails": "View Details",
+      "noDescription": "No description available",
+      "fetchError": "Failed to fetch videos"
+    },
+    "download": {
+      "downloading": "Downloading video...",
+      "success": "Video downloaded successfully",
+      "error": "Failed to download video"
+    },
     "copy": "Copy",
     "linkCopied": "Link copied to clipboard",
     "copyFailed": "Failed to copy link"
   },
   "videoDetails": {
+    "title": "Title",
+    "description": "Description",
     "views": "views",
+    "followers": "followers",
+    "follow": "Follow",
+    "notFound": "Video not found",
+    "notFoundDescription": "The video you are looking for does not exist or has been removed.",
     "share": "Share",
     "download": "Download",
-    "description": "Description",
     "noDescription": "No description provided",
     "tags": "Tags",
     "noTags": "No tags",
@@ -211,6 +262,15 @@
     "frame": "Frame",
     "position": "Position",
     "showingFirst": "Showing first {count} results",
+    "loadingDetections": "Loading detection results...",
+    "noDetections": "No detections found for this video",
+    "detectionsError": "Error loading detection results",
+    "metadata": "Video Metadata",
+    "filename": "Filename",
+    "fileSize": "File Size",
+    "duration": "Duration",
+    "resolution": "Resolution",
+    "fps": "FPS",
     "status": {
       "processing": "Processing",
       "completed": "Completed",
@@ -357,5 +417,11 @@
   "footer": {
     "description": "Football detection and analysis platform powered by YOLO AI",
     "copyright": "© 2024 Football Video Processor. All rights reserved."
+  },
+  "videoStatus": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed"
   }
 }

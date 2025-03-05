@@ -4,6 +4,9 @@ import { locales } from "@/lib/i18n/locales";
 import { SiteLayout } from "./site-layout";
 import { defaultMetadata, viewport } from "./metadata";
 import { Metadata } from "next";
+import { AuthProvider } from "@/lib/auth/AuthContext";
+import { VideoProvider } from "@/lib/videos/VideoContext";
+import { Toaster } from "sonner";
 
 // Import messages
 import enMessages from "@/lib/i18n/messages/en.json";
@@ -37,7 +40,12 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlProvider locale={locale} messages={messages[locale]}>
-      <SiteLayout locale={locale}>{children}</SiteLayout>
+      <AuthProvider>
+        <VideoProvider>
+          <SiteLayout locale={locale}>{children}</SiteLayout>
+          <Toaster position="top-right" richColors closeButton />
+        </VideoProvider>
+      </AuthProvider>
     </NextIntlProvider>
   );
 }

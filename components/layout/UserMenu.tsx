@@ -9,9 +9,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { usePermissions } from "@/lib/auth/usePermissions";
 
 interface UserMenuProps {
   locale: string;
@@ -21,32 +23,67 @@ interface UserMenuProps {
 
 export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
   const t = useTranslations();
-  // Mock user state - in a real app, this would come from auth context
-  const [user, setUser] = useState<{ name: string; email: string } | null>(
-    null
-  );
+  const { user, isAuthenticated, logout } = useAuth();
+  const { isAdmin } = usePermissions();
 
   if (mobile) {
     return (
       <div className="flex flex-col space-y-2">
-        {user ? (
+        {isAuthenticated && user ? (
           <>
             <div className="flex items-center gap-3 py-2">
               <Avatar>
-                <AvatarImage src="/placeholder-avatar.jpg" alt={user.name} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                <AvatarImage
+                  src="/placeholder-avatar.jpg"
+                  alt={user.full_name}
+                />
+                <AvatarFallback>{user.full_name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-sm font-medium">{user.full_name}</p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
+            {isAdmin() && (
+              <Link href={`/${locale}/admin`} onClick={onClick}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-left"
+                >
+                  {t("admin.title")}
+                </Button>
+              </Link>
+            )}
+            <Link href={`/${locale}/dashboard`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-left"
+              >
+                {t("dashboard.title")}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/upload`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-left"
+              >
+                {t("upload.title")}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/videos`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-left"
+              >
+                {t("videos.title")}
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               className="w-full justify-start text-left"
               onClick={() => {
-                setUser(null);
-                onClick?.();
+                logout();
+                if (onClick) onClick();
               }}
             >
               {t("auth.logout")}
@@ -63,7 +100,10 @@ export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
               </Button>
             </Link>
             <Link href={`/${locale}/auth/register`} onClick={onClick}>
-              <Button className="w-full justify-start text-left">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-left"
+              >
                 {t("auth.register")}
               </Button>
             </Link>
@@ -74,61 +114,75 @@ export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
   }
 
   return (
-    <div className="hidden md:flex items-center gap-4 animate-fade-in">
-      {user ? (
+    <div>
+      {isAuthenticated && user ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="relative h-8 w-8 rounded-full"
-              aria-label="User menu"
+            <motion.button
+              className="flex items-center gap-2 rounded-full border p-1 pr-3 hover:bg-accent"
+              whileTap={{ scale: 0.97 }}
             >
-              <Avatar>
-                <AvatarImage src="/placeholder-avatar.jpg" alt={user.name} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              <Avatar className="h-8 w-8">
+                <AvatarImage
+                  src="/placeholder-avatar.jpg"
+                  alt={user.full_name}
+                />
+                <AvatarFallback>{user.full_name.charAt(0)}</AvatarFallback>
               </Avatar>
-            </Button>
+              <span className="text-sm font-medium">{user.full_name}</span>
+            </motion.button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             <div className="flex items-center gap-2 p-2">
               <div className="flex flex-col space-y-0.5">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="text-sm font-medium">{user.full_name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.email}
+                </p>
               </div>
             </div>
-            <DropdownMenuItem
-              onClick={() => {
-                setUser(null);
-              }}
-            >
+            <DropdownMenuSeparator />
+
+            <Link href={`/${locale}/dashboard`}>
+              <DropdownMenuItem>{t("dashboard.title")}</DropdownMenuItem>
+            </Link>
+
+            <Link href={`/${locale}/upload`}>
+              <DropdownMenuItem>{t("upload.title")}</DropdownMenuItem>
+            </Link>
+
+            <Link href={`/${locale}/videos`}>
+              <DropdownMenuItem>{t("videos.title")}</DropdownMenuItem>
+            </Link>
+
+            {isAdmin() && (
+              <>
+                <DropdownMenuSeparator />
+                <Link href={`/${locale}/admin`}>
+                  <DropdownMenuItem>{t("admin.title")}</DropdownMenuItem>
+                </Link>
+              </>
+            )}
+
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout}>
               {t("auth.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <>
+        <div className="flex items-center gap-2">
           <Link href={`/${locale}/auth/login`}>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full transition-transform"
-              >
-                {t("auth.login")}
-              </Button>
-            </motion.div>
+            <Button variant="ghost" size="sm">
+              {t("auth.login")}
+            </Button>
           </Link>
           <Link href={`/${locale}/auth/register`}>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                size="sm"
-                className="rounded-full transition-transform hover:shadow-md"
-              >
-                {t("auth.register")}
-              </Button>
-            </motion.div>
+            <Button variant="default" size="sm">
+              {t("auth.register")}
+            </Button>
           </Link>
-        </>
+        </div>
       )}
     </div>
   );

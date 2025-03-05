@@ -4,10 +4,14 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import UploadCard from "./UploadCard";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { useParams } from "next/navigation";
 
 export default function HeroSection() {
   const t = useTranslations();
+  const { user, isAuthenticated } = useAuth();
+  const params = useParams();
+  const locale = params.locale as string;
 
   // Animation variants
   const containerVariants = {
@@ -73,42 +77,57 @@ export default function HeroSection() {
             </p>
           </motion.div>
 
-          {/* Upload Card */}
-          <UploadCard variants={itemVariants} />
-
           {/* Navigation buttons */}
           <motion.div
             className="flex flex-wrap gap-4 justify-center mt-8"
             variants={itemVariants}
           >
-            <Link href="./dashboard">
+            <Link href={`/${locale}/upload`}>
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="lg"
-                  className="rounded-full backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300 px-8"
+                  className="rounded-full backdrop-blur-sm bg-primary hover:bg-primary/90 transition-all duration-300 px-8"
                 >
-                  {t("dashboard.title")}
+                  {t("upload.title")}
                 </Button>
               </motion.div>
             </Link>
-            <Link href="./auth/login">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300 px-8"
+            {user?.is_admin && (
+              <Link href={`/${locale}/dashboard`}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  {t("auth.login")}
-                </Button>
-              </motion.div>
-            </Link>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="rounded-full backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300 px-8"
+                  >
+                    {t("dashboard.title")}
+                  </Button>
+                </motion.div>
+              </Link>
+            )}
+            {!isAuthenticated && (
+              <Link href={`/${locale}/auth/login`}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="rounded-full backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300 px-8"
+                  >
+                    {t("auth.login")}
+                  </Button>
+                </motion.div>
+              </Link>
+            )}
           </motion.div>
         </motion.div>
       </div>

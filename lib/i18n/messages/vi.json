@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "Xử Lý Video Bóng Đá",
-    "description": "Tải lên video bóng đá của bạn và xử lý chúng với mô hình nhận dạng đối tượng YOLO",
-    "beta": "Phiên bản thử nghiệm"
+    "title": "Phân tích Video Bóng đá",
+    "description": "Tải lên video bóng đá của bạn và xử lý chúng với công nghệ nhận diện đối tượng YOLO",
+    "beta": "Thử nghiệm"
   },
   "common": {
     "loading": "Đang tải...",
@@ -32,7 +32,7 @@
     "account": "Tài khoản",
     "profile": "Hồ sơ",
     "allRightsReserved": "Đã đăng ký bản quyền",
-    "privacy": "Chính sách riêng tư",
+    "privacy": "Chính sách bảo mật",
     "terms": "Điều khoản dịch vụ",
     "cookies": "Chính sách cookie",
     "getStarted": "Bắt đầu",
@@ -52,7 +52,9 @@
     "docs": "Tài liệu",
     "savePreferences": "Lưu tùy chọn",
     "saving": "Đang lưu...",
-    "daysAgo": "ngày trước"
+    "daysAgo": "ngày trước",
+    "backToHome": "Quay lại trang chủ",
+    "backToVideos": "Quay lại danh sách video"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -69,14 +71,20 @@
     "noAccount": "Chưa có tài khoản?",
     "haveAccount": "Đã có tài khoản?",
     "invalidCredentials": "Email hoặc mật khẩu không hợp lệ",
-    "forgotPasswordDescription": "Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn một liên kết để đặt lại mật khẩu.",
+    "forgotPasswordDescription": "Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn liên kết để đặt lại mật khẩu.",
     "sendResetLink": "Gửi liên kết đặt lại",
     "sending": "Đang gửi...",
     "resetLinkSent": "Đã gửi liên kết đặt lại thành công",
-    "resetLinkSentDescription": "Nếu tồn tại tài khoản với email đó, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư đến của bạn.",
+    "resetLinkSentDescription": "Nếu tài khoản tồn tại với email đó, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư đến của bạn.",
     "checkYourEmail": "Kiểm tra email của bạn",
     "rememberPassword": "Nhớ mật khẩu của bạn?",
-    "backToLogin": "Quay lại đăng nhập"
+    "backToLogin": "Quay lại đăng nhập",
+    "emailRequired": "Email là bắt buộc",
+    "passwordRequired": "Mật khẩu là bắt buộc",
+    "nameRequired": "Tên là bắt buộc",
+    "passwordsDoNotMatch": "Mật khẩu không khớp",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
+    "resetLinkError": "Không thể gửi liên kết đặt lại"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -89,7 +97,7 @@
     "processing": "Đang xử lý",
     "completed": "Đã hoàn thành",
     "failed": "Thất bại",
-    "notFound": "Không tìm thấy video nào",
+    "notFound": "Không tìm thấy video",
     "videoDetails": "Chi tiết video",
     "originalVideo": "Video gốc",
     "processedVideo": "Video đã xử lý",
@@ -99,13 +107,13 @@
     "status": {
       "pending": "Đang chờ",
       "processing": "Đang xử lý",
-      "completed": "Hoàn thành",
+      "completed": "Đã hoàn thành",
       "failed": "Thất bại",
       "cancelled": "Đã hủy"
     },
     "uploadNow": "Tải lên ngay",
-    "noVideosFound": "Không tìm thấy video nào. Hãy tải lên video để bắt đầu.",
-    "dragAndDrop": "Kéo và thả tập tin video để tải lên",
+    "noVideosFound": "Không tìm thấy video. Tải lên video để bắt đầu.",
+    "dragAndDrop": "Kéo và thả tệp video để tải lên",
     "recentVideos": "Video gần đây",
     "viewAll": "Xem tất cả",
     "analytics": "Phân tích",
@@ -114,8 +122,8 @@
     "detectedObjects": "Đối tượng đã phát hiện",
     "storageUsed": "Dung lượng đã sử dụng",
     "trending": {
-      "up": "Đang tăng",
-      "down": "Đang giảm",
+      "up": "Xu hướng tăng",
+      "down": "Xu hướng giảm",
       "stable": "Ổn định"
     },
     "searchVideos": "Tìm kiếm video...",
@@ -125,8 +133,8 @@
     "filterCompleted": "Đã hoàn thành",
     "filterFailed": "Thất bại",
     "sortBy": "Sắp xếp theo",
-    "sortNewest": "Mới nhất",
-    "sortOldest": "Cũ nhất",
+    "sortNewest": "Mới nhất trước",
+    "sortOldest": "Cũ nhất trước",
     "sortName": "Tên",
     "viewDetails": "Xem chi tiết",
     "share": "Chia sẻ",
@@ -134,24 +142,54 @@
     "delete": "Xóa",
     "objects": "đối tượng",
     "uploadedOn": "Đã tải lên vào {date}",
-    "noVideos": "Không tìm thấy video nào",
+    "noVideos": "Không tìm thấy video",
     "uploadFirst": "Tải lên video đầu tiên của bạn để bắt đầu",
-    "viewUploads": "Xem video đã tải lên"
+    "viewUploads": "Xem các video đã tải lên"
+  },
+  "home": {
+    "title": "Trang chủ",
+    "subtitle": "Xử lý video bóng đá với AI",
+    "description": "Tải lên và phân tích video bóng đá của bạn với công nghệ nhận diện AI tiên tiến"
+  },
+  "videos": {
+    "title": "Video",
+    "subtitle": "Duyệt và quản lý video của bạn",
+    "description": "Xem tất cả video đã tải lên và đã xử lý của bạn"
+  },
+  "upload": {
+    "title": "Tải lên video",
+    "subtitle": "Tải lên video mới để xử lý",
+    "description": "Tải lên video bóng đá của bạn để phân tích và nhận diện bằng AI",
+    "myVideos": "Video của tôi",
+    "newVideo": "Tải lên video mới"
   },
   "video": {
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "mute": "Tắt tiếng",
+    "unmute": "Bật tiếng",
+    "fullscreen": "Toàn màn hình",
+    "exitFullscreen": "Thoát toàn màn hình",
+    "loading": "Đang tải...",
+    "share": "Chia sẻ",
+    "download": "Tải xuống",
+    "like": "Thích",
+    "unlike": "Bỏ thích",
     "upload": {
       "title": "Tải lên video",
-      "dragDrop": "Kéo và thả video của bạn vào đây, hoặc nhấp để duyệt",
-      "requirements": "Yêu cầu: MP4 (H.264), 720p-1080p, tối đa 3 phút, tối đa 50MB",
-      "selectSegment": "Chọn một đoạn video (tối đa 3 phút)",
+      "upload": "Tải lên",
       "uploading": "Đang tải lên...",
+      "dragDrop": "Kéo và thả video của bạn vào đây hoặc nhấp để duyệt",
+      "requirements": "Định dạng video, tối đa 100MB",
+      "file": "Tệp video",
+      "invalidFormat": "Định dạng tệp không hợp lệ. Chỉ hỗ trợ tệp video.",
+      "tooLarge": "Tệp quá lớn. Kích thước tối đa là 100MB.",
+      "noFileSelected": "Vui lòng chọn tệp video",
+      "titleRequired": "Tiêu đề là bắt buộc",
       "uploadSuccess": "Tải lên video thành công",
-      "uploadError": "Lỗi khi tải lên video",
-      "invalidFormat": "Định dạng video không hợp lệ. Vui lòng tải lên tệp MP4.",
-      "tooLarge": "Video quá lớn. Kích thước tối đa là 50MB.",
-      "tooLong": "Video quá dài. Thời lượng tối đa là 3 phút.",
-      "retry": "Thử lại tải lên",
-      "noFileSelected": "Chưa chọn tệp nào"
+      "uploadError": "Không thể tải lên video",
+      "submit": "Tải lên video",
+      "changeFile": "Thay đổi tệp"
     },
     "processing": {
       "title": "Đang xử lý video",
@@ -165,25 +203,41 @@
       "failed": "Xử lý thất bại",
       "retry": "Thử lại xử lý"
     },
-    "play": "Phát",
-    "pause": "Tạm dừng",
-    "mute": "Tắt tiếng",
-    "unmute": "Bật tiếng",
-    "enterFullscreen": "Toàn màn hình",
-    "exitFullscreen": "Thoát toàn màn hình",
-    "shareVideo": "Chia sẻ video",
+    "delete": {
+      "confirmTitle": "Xóa Video",
+      "confirmDescription": "Bạn có chắc chắn muốn xóa \"{title}\"? Hành động này không thể hoàn tác.",
+      "success": "Đã xóa video thành công",
+      "error": "Không thể xóa video",
+      "deleting": "Đang xóa..."
+    },
+    "list": {
+      "title": "Video của tôi",
+      "viewDetails": "Xem chi tiết",
+      "noDescription": "Không có mô tả",
+      "fetchError": "Không thể tải danh sách video"
+    },
     "copy": "Sao chép",
     "linkCopied": "Đã sao chép liên kết vào bộ nhớ tạm",
-    "copyFailed": "Không thể sao chép liên kết"
+    "copyFailed": "Không thể sao chép liên kết",
+    "download": {
+      "downloading": "Đang tải xuống video...",
+      "success": "Đã tải xuống video thành công",
+      "error": "Không thể tải xuống video"
+    }
   },
   "videoDetails": {
+    "title": "Tiêu đề",
+    "description": "Mô tả",
     "views": "lượt xem",
+    "followers": "người theo dõi",
+    "follow": "Theo dõi",
+    "notFound": "Không tìm thấy video",
+    "notFoundDescription": "Video bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.",
     "share": "Chia sẻ",
     "download": "Tải xuống",
-    "description": "Mô tả",
     "noDescription": "Không có mô tả",
     "tags": "Thẻ",
-    "noTags": "Không có thẻ nào",
+    "noTags": "Không có thẻ",
     "uploader": "Người tải lên",
     "relatedVideos": "Video liên quan",
     "viewAllVideos": "Xem tất cả video",
@@ -192,6 +246,7 @@
     "summary": "Tổng quan",
     "timeline": "Dòng thời gian",
     "data": "Dữ liệu",
+    "visualization": "Trực quan hóa",
     "objectTypes": "Loại đối tượng",
     "statistics": "Thống kê",
     "totalDetections": "Tổng số phát hiện",
@@ -215,7 +270,25 @@
       "processing": "Đang xử lý",
       "completed": "Hoàn thành",
       "failed": "Thất bại"
-    }
+    },
+    "metadata": "Thông tin video",
+    "filename": "Tên tệp",
+    "fileSize": "Kích thước tệp",
+    "duration": "Thời lượng",
+    "resolution": "Độ phân giải",
+    "fps": "FPS",
+    "frames": "Tổng số khung hình",
+    "processingStarted": "Bắt đầu xử lý",
+    "processingCompleted": "Hoàn thành xử lý",
+    "errorMessage": "Thông báo lỗi",
+    "downloadOriginal": "Tải xuống bản gốc",
+    "downloadProcessed": "Tải xuống bản đã xử lý",
+    "loadingDetections": "Đang tải kết quả phát hiện...",
+    "noDetections": "Không tìm thấy phát hiện nào cho video này",
+    "detectionsError": "Lỗi khi tải kết quả phát hiện",
+    "activeDetections": "Phát hiện đang hoạt động",
+    "noActiveDetections": "Không có phát hiện nào tại thời điểm này",
+    "jumpTo": "Nhảy đến"
   },
   "admin": {
     "title": "Bảng điều khiển quản trị",
@@ -230,13 +303,13 @@
       "bannedUsers": "Người dùng bị cấm",
       "admins": "Quản trị viên",
       "createUser": "Tạo người dùng",
-      "editUser": "Chỉnh sửa người dùng",
+      "editUser": "Sửa người dùng",
       "deleteUser": "Xóa người dùng",
       "banUser": "Cấm người dùng",
       "unbanUser": "Bỏ cấm người dùng",
       "promoteToAdmin": "Thăng cấp lên quản trị viên",
-      "demoteFromAdmin": "Hạ cấp quản trị viên",
-      "lastLogin": "Đăng nhập gần đây",
+      "demoteFromAdmin": "Hạ cấp từ quản trị viên",
+      "lastLogin": "Đăng nhập lần cuối",
       "loginHistory": "Lịch sử đăng nhập",
       "activity": "Hoạt động"
     },
@@ -254,10 +327,10 @@
       "currentModel": "Mô hình hiện tại",
       "updateModel": "Cập nhật mô hình",
       "modelParameters": "Tham số mô hình",
-      "confidence": "Ngưỡng tin cậy",
+      "confidence": "Ngưỡng độ tin cậy",
       "iou": "Ngưỡng IoU",
       "saveParameters": "Lưu tham số",
-      "resetParameters": "Đặt lại mặc định",
+      "resetParameters": "Đặt lại về mặc định",
       "modelPerformance": "Hiệu suất mô hình",
       "averageProcessingTime": "Thời gian xử lý trung bình",
       "successRate": "Tỷ lệ thành công"
@@ -267,7 +340,7 @@
       "cpuUsage": "Sử dụng CPU",
       "gpuUsage": "Sử dụng GPU",
       "memoryUsage": "Sử dụng bộ nhớ",
-      "diskUsage": "Sử dụng ổ đĩa",
+      "diskUsage": "Sử dụng đĩa",
       "logs": "Nhật ký hệ thống",
       "viewLogs": "Xem nhật ký",
       "clearLogs": "Xóa nhật ký",
@@ -288,19 +361,19 @@
     "followers": "Người theo dõi",
     "following": "Đang theo dõi",
     "editProfile": "Chỉnh sửa hồ sơ",
-    "edit": "Sửa",
+    "edit": "Chỉnh sửa",
     "follow": "Theo dõi",
     "followShort": "Theo dõi",
-    "noVideos": "Chưa có video nào",
+    "noVideos": "Chưa có video",
     "noVideosDescription": "Người dùng này chưa tải lên video nào",
-    "noLikedVideos": "Chưa có video đã thích",
+    "noLikedVideos": "Không có video đã thích",
     "noLikedVideosDescription": "Người dùng này chưa thích video nào",
     "aboutMe": "Về tôi",
     "activity": "Hoạt động gần đây",
-    "uploadedVideo": "Đã tải lên một video",
-    "likedVideo": "Đã thích một video",
+    "uploadedVideo": "Đã tải lên video",
+    "likedVideo": "Đã thích video",
     "profileSettings": "Cài đặt hồ sơ",
-    "profileSettingsDescription": "Cập nhật thông tin và tùy chọn hồ sơ của bạn",
+    "profileSettingsDescription": "Cập nhật thông tin hồ sơ và tùy chọn của bạn",
     "changeAvatar": "Thay đổi ảnh đại diện",
     "name": "Tên",
     "email": "Email",
@@ -322,9 +395,9 @@
     "settingsError": "Lỗi khi lưu cài đặt",
     "notificationsSaved": "Đã lưu tùy chọn thông báo",
     "dangerZone": "Vùng nguy hiểm",
-    "dangerZoneDescription": "Xóa vĩnh viễn tài khoản và tất cả nội dung của bạn",
+    "dangerZoneDescription": "Xóa vĩnh viễn tài khoản của bạn và tất cả nội dung của bạn",
     "deleteAccount": "Xóa tài khoản",
-    "deleteAccountDescription": "Khi bạn xóa tài khoản, không thể khôi phục lại. Vui lòng chắc chắn.",
+    "deleteAccountDescription": "Khi bạn xóa tài khoản, không thể hoàn tác. Vui lòng chắc chắn.",
     "accountDeletionCanceled": "Đã hủy xóa tài khoản"
   },
   "error": {
@@ -349,13 +422,19 @@
       "processing": "Đang xử lý..."
     },
     "callToAction": {
-      "getStarted": "Bắt đầu ngay",
+      "getStarted": "Bắt đầu",
       "learnMore": "Tìm hiểu thêm",
-      "tryNow": "Dùng thử ngay"
+      "tryNow": "Thử ngay"
     }
   },
   "footer": {
     "description": "Nền tảng phát hiện và phân tích bóng đá được hỗ trợ bởi AI YOLO",
-    "copyright": "© 2024 Xử Lý Video Bóng Đá. Đã đăng ký bản quyền."
+    "copyright": "© 2024 Phân tích Video Bóng đá. Đã đăng ký bản quyền."
+  },
+  "videoStatus": {
+    "pending": "Đang chờ",
+    "processing": "Đang xử lý",
+    "completed": "Hoàn thành",
+    "failed": "Thất bại"
   }
 }

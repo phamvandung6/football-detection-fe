@@ -1,6 +1,6 @@
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Metadata } from "next";
 import { generateMetadata } from "@/app/[locale]/metadata";
+import AdminTabs from "@/components/admin/AdminTabs";
+import { Metadata } from "next";
 
 // Metadata cho trang admin
 export const metadata: Metadata = generateMetadata({
@@ -10,5 +10,10 @@ export const metadata: Metadata = generateMetadata({
 });
 
 export default function AdminDashboardPage() {
-  return <AdminLayout />;
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <h1 className="text-3xl font-bold">Bảng điều khiển quản trị</h1>
+      <AdminTabs />
+    </div>
+  );
 }
