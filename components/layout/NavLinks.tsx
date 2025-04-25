@@ -1,12 +1,12 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthSession } from "@/lib/auth/useAuthSession";
+import { NAVIGATION_ROUTES } from "@/lib/constants/navigation";
+import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
-import { useAuth } from "@/lib/auth/AuthContext";
-import { usePermissions } from "@/lib/auth/usePermissions";
-import { NAVIGATION_ROUTES } from "@/lib/constants/navigation";
 
 interface NavLinksProps {
   locale: string;
@@ -66,8 +66,9 @@ const NavLinkItem = ({
 export function NavLinks({ locale, mobile = false, onClick }: NavLinksProps) {
   const pathname = usePathname();
   const t = useTranslations();
-  const { isAuthenticated } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { user, isAuthenticated, isLoading } = useAuthSession();
+
+  const isAdmin = user?.roles.includes("admin");
 
   // Check if current page is active
   const isActive = (path: string) => pathname === `/${locale}${path}`;
@@ -90,7 +91,7 @@ export function NavLinks({ locale, mobile = false, onClick }: NavLinksProps) {
       );
     }
 
-    if (isAdmin()) {
+    if (isAdmin) {
       links.push(
         ...NAVIGATION_ROUTES.ADMIN.map((route) => ({
           href: route.href,
@@ -103,6 +104,16 @@ export function NavLinks({ locale, mobile = false, onClick }: NavLinksProps) {
   };
 
   const links = getLinks();
+
+  if (isLoading && !mobile) {
+    return (
+      <nav className="hidden md:flex items-center gap-6 h-6">
+        <Skeleton className="h-4 w-16 rounded" />
+        <Skeleton className="h-4 w-20 rounded" />
+        <Skeleton className="h-4 w-16 rounded" />
+      </nav>
+    );
+  }
 
   if (mobile) {
     return (

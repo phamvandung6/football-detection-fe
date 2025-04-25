@@ -1,19 +1,48 @@
-import { User } from "@/lib/auth/AuthContext";
+import { User } from "@/types/user";
 import { API_URL } from "../utils";
 
-// Hàm lấy danh sách người dùng (chỉ admin mới có quyền)
-export async function getUsers(token: string): Promise<User[]> {
-  const response = await fetch(`${API_URL}/users/?skip=0&limit=100`, {
+// Định nghĩa kiểu dữ liệu cho API response
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+// Định nghĩa kiểu dữ liệu phân trang
+interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+// Hàm lấy danh sách người dùng
+export async function getUsers(
+  token: string,
+  page: number = 0,
+  size: number = 10
+): Promise<PageResponse<User>> {
+  const response = await fetch(`${API_URL}/users?page=${page}&size=${size}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch users");
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Không thể lấy danh sách người dùng");
   }
 
-  return await response.json();
+  const responseData: ApiResponse<PageResponse<User>> = await response.json();
+
+  if (!responseData.success) {
+    throw new Error(responseData.message);
+  }
+
+  return responseData.data;
 }
 
 // Hàm lấy chi tiết người dùng
@@ -25,10 +54,41 @@ export async function getUserById(id: string, token: string): Promise<User> {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch user");
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Không thể lấy thông tin người dùng");
   }
 
-  return await response.json();
+  const responseData: ApiResponse<User> = await response.json();
+
+  if (!responseData.success) {
+    throw new Error(responseData.message);
+  }
+
+  return responseData.data;
+}
+
+// Hàm lấy thông tin người dùng hiện tại
+export async function getCurrentUser(token: string): Promise<User> {
+  const response = await fetch(`${API_URL}/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(
+      errorData.message || "Không thể lấy thông tin người dùng hiện tại"
+    );
+  }
+
+  const responseData: ApiResponse<User> = await response.json();
+
+  if (!responseData.success) {
+    throw new Error(responseData.message);
+  }
+
+  return responseData.data;
 }
 
 // Hàm cập nhật thông tin người dùng
@@ -47,26 +107,51 @@ export async function updateUser(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update user");
+    const errorData = await response.json();
+    throw new Error(
+      errorData.message || "Không thể cập nhật thông tin người dùng"
+    );
   }
 
-  return await response.json();
+  const responseData: ApiResponse<User> = await response.json();
+
+  if (!responseData.success) {
+    throw new Error(responseData.message);
+  }
+
+  return responseData.data;
 }
 
-// Hàm thay đổi trạng thái người dùng (kích hoạt/vô hiệu hóa)
-export async function toggleUserStatus(
-  id: string,
-  isActive: boolean,
-  token: string
-): Promise<User> {
-  return updateUser(id, { is_active: isActive }, token);
+// Hàm xóa người dùng
+export async function deleteUser(id: string, token: string): Promise<boolean> {
+  const response = await fetch(`${API_URL}/users/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Không thể xóa người dùng");
+  }
+
+  const responseData: ApiResponse<void> = await response.json();
+
+  return responseData.success;
 }
 
-// Hàm thay đổi quyền admin
+// Hàm thay đổi quyền admin - sử dụng hàm updateUser
 export async function toggleAdminStatus(
   id: string,
   isAdmin: boolean,
   token: string
 ): Promise<User> {
-  return updateUser(id, { is_admin: isAdmin }, token);
+  // API mới không có trường is_admin mà sử dụng mảng roles
+  // Nên chúng ta cần thêm/xóa role ROLE_ADMIN từ mảng roles
+  const userData = {
+    roles: isAdmin ? ["ROLE_USER", "ROLE_ADMIN"] : ["ROLE_USER"],
+  };
+
+  return updateUser(id, userData, token);
 }

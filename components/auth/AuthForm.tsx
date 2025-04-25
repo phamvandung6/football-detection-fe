@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { loginAction, registerAction } from "@/app/[locale]/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/lib/auth/AuthContext";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
 interface AuthFormProps {
@@ -16,98 +16,34 @@ interface AuthFormProps {
   locale: string;
 }
 
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  const t = useTranslations("common");
+  return (
+    <Button type="submit" disabled={pending} aria-disabled={pending}>
+      {pending ? t("loading") : label}
+    </Button>
+  );
+}
+
 export function AuthForm({ type, locale }: AuthFormProps) {
   const t = useTranslations();
-  const router = useRouter();
-  const { login, register } = useAuth();
   const isLogin = type === "login";
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const action = isLogin ? loginAction : registerAction;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const [formState, formAction] = useActionState(action, undefined);
 
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+  useEffect(() => {
+    if (formState?.success === false && formState.message) {
+      toast.error(formState.message);
     }
-  };
+  }, [formState]);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.email) {
-      newErrors.email = t("auth.emailRequired");
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t("common.invalidEmail");
-    }
-
-    if (!formData.password) {
-      newErrors.password = t("auth.passwordRequired");
-    } else if (formData.password.length < 6) {
-      newErrors.password = t("auth.passwordTooShort");
-    }
-
-    if (!isLogin) {
-      if (!formData.name) {
-        newErrors.name = t("auth.nameRequired");
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = t("auth.passwordsDoNotMatch");
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      if (isLogin) {
-        const success = await login(formData.email, formData.password);
-        if (success) {
-          router.push(`/${locale}/dashboard`);
-        }
-      } else {
-        const success = await register(
-          formData.name,
-          formData.email,
-          formData.password
-        );
-        if (success) {
-          router.push(`/${locale}/auth/login`);
-        }
-      }
-    } catch (error) {
-      console.error("Auth error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Authentication failed"
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const nameError = formState?.errors?.name?.[0];
+  const emailError = formState?.errors?.email?.[0];
+  const usernameError = formState?.errors?.username?.[0];
+  const passwordError = formState?.errors?.password?.[0];
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -115,49 +51,67 @@ export function AuthForm({ type, locale }: AuthFormProps) {
         <h1 className="text-2xl font-semibold tracking-tight">
           {isLogin ? t("auth.login") : t("auth.register")}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          {isLogin ? t("auth.loginRequired") : t("auth.noAccount")}
-        </p>
       </div>
       <div className="grid gap-6">
-        <form onSubmit={handleSubmit}>
+        <form action={formAction}>
+          <input type="hidden" name="locale" value={locale} />
           <div className="grid gap-4">
             {!isLogin && (
-              <div className="grid gap-2">
-                <Label htmlFor="name">{t("auth.name")}</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  autoCorrect="off"
-                  disabled={isSubmitting}
-                  aria-invalid={!!errors.name}
-                />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name}</p>
-                )}
-              </div>
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="name">{t("auth.name")}</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoCapitalize="words"
+                    autoComplete="name"
+                    autoCorrect="off"
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? "name-error" : undefined}
+                  />
+                  {nameError && (
+                    <p id="name-error" className="text-xs text-destructive">
+                      {nameError}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">{t("auth.email")}</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    aria-invalid={!!emailError}
+                    aria-describedby={emailError ? "email-error" : undefined}
+                  />
+                  {emailError && (
+                    <p id="email-error" className="text-xs text-destructive">
+                      {emailError}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
             <div className="grid gap-2">
-              <Label htmlFor="email">{t("auth.email")}</Label>
+              <Label htmlFor="username">{t("auth.username")}</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
+                id="username"
+                name="username"
+                type="text"
                 autoCapitalize="none"
-                autoComplete="email"
+                autoComplete="username"
                 autoCorrect="off"
-                disabled={isSubmitting}
-                aria-invalid={!!errors.email}
+                aria-invalid={!!usernameError}
+                aria-describedby={usernameError ? "username-error" : undefined}
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
+              {usernameError && (
+                <p id="username-error" className="text-xs text-destructive">
+                  {usernameError}
+                </p>
               )}
             </div>
             <div className="grid gap-2">
@@ -179,14 +133,14 @@ export function AuthForm({ type, locale }: AuthFormProps) {
                 id="password"
                 name="password"
                 type="password"
-                value={formData.password}
-                onChange={handleChange}
                 autoComplete={isLogin ? "current-password" : "new-password"}
-                disabled={isSubmitting}
-                aria-invalid={!!errors.password}
+                aria-invalid={!!passwordError}
+                aria-describedby={passwordError ? "password-error" : undefined}
               />
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
+              {passwordError && (
+                <p id="password-error" className="text-xs text-destructive">
+                  {passwordError}
+                </p>
               )}
             </div>
             {!isLogin && (
@@ -198,26 +152,13 @@ export function AuthForm({ type, locale }: AuthFormProps) {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
                   autoComplete="new-password"
-                  disabled={isSubmitting}
-                  aria-invalid={!!errors.confirmPassword}
                 />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">
-                    {errors.confirmPassword}
-                  </p>
-                )}
               </div>
             )}
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? t("common.loading")
-                : isLogin
-                ? t("auth.login")
-                : t("auth.register")}
-            </Button>
+            <SubmitButton
+              label={isLogin ? t("auth.login") : t("auth.register")}
+            />
           </div>
         </form>
         <div className="relative">
@@ -226,16 +167,20 @@ export function AuthForm({ type, locale }: AuthFormProps) {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
+              {t("common.orContinueWith")}
             </span>
           </div>
         </div>
-        <Link href={`/${locale}/auth/${isLogin ? "register" : "login"}`}>
-          <Button variant="outline" className="w-full">
-            {isLogin ? t("auth.register") : t("auth.login")}
-          </Button>
-        </Link>
       </div>
+      <p className="px-8 text-center text-sm text-muted-foreground">
+        {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}{" "}
+        <Link
+          href={`/${locale}/auth/${isLogin ? "register" : "login"}`}
+          className="underline underline-offset-4 hover:text-primary"
+        >
+          {isLogin ? t("auth.register") : t("auth.login")}
+        </Link>
+      </p>
     </div>
   );
 }

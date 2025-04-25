@@ -1,27 +1,27 @@
-import { notFound } from "next/navigation";
-import { NextIntlProvider } from "@/lib/i18n/provider";
 import { locales } from "@/lib/i18n/locales";
-import { SiteLayout } from "./site-layout";
-import { defaultMetadata, viewport } from "./metadata";
+import { ReactQueryProvider } from "@/providers/query-provider";
 import { Metadata } from "next";
-import { AuthProvider } from "@/lib/auth/AuthContext";
-import { VideoProvider } from "@/lib/videos/VideoContext";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import { notFound } from "next/navigation";
 import { Toaster } from "sonner";
-
-// Import messages
-import enMessages from "@/lib/i18n/messages/en.json";
-import viMessages from "@/lib/i18n/messages/vi.json";
-
-const messages: Record<string, any> = {
-  en: enMessages,
-  vi: viMessages,
-};
+import { defaultMetadata, viewport } from "./metadata";
+import { SiteLayout } from "./site-layout";
 
 // Metadata cho layout
 export const metadata: Metadata = defaultMetadata;
 
 // Export viewport
 export { viewport };
+
+// // Import các file ngôn ngữ (Xóa import tĩnh)
+// import en from "@/lib/i18n/messages/en.json";
+// import vi from "@/lib/i18n/messages/vi.json";
+
+// const messages = {
+//   en,
+//   vi,
+// };
 
 export default async function LocaleLayout({
   children,
@@ -30,22 +30,49 @@ export default async function LocaleLayout({
   children: React.ReactNode;
   params: { locale: string };
 }) {
-  // Await params before accessing its properties
-  const { locale } = await params;
+  // Explicitly await the params object as required by Next.js
+  const awaitedParams = await params;
+  const locale = awaitedParams.locale;
 
-  // Validate that the incoming locale is supported
+  // Debug log right after getting locale
+  // console.log(`[LocaleLayout] Received locale after await: ${locale}`);
+
+  // Validate locale
   if (!locales.includes(locale as any)) {
+    // console.error(`[LocaleLayout] Locale validation failed for: ${locale}`);
+    notFound();
+  }
+
+  // Lấy messages động, truyền locale tường minh
+  let messages;
+  try {
+    // console.log(
+    //  `[LocaleLayout] Calling getMessages explicitly with locale: ${locale}`
+    // );
+    messages = await getMessages({ locale });
+    // console.log(`[LocaleLayout] Successfully got messages for: ${locale}`);
+  } catch (error) {
+    console.error(
+      `[LocaleLayout] Error calling getMessages for locale ${locale}:`,
+      error
+    );
+    // Nếu không lấy được messages (kể cả khi đã truyền locale đúng),
+    // có thể là lỗi nghiêm trọng hơn, nên gọi notFound()
     notFound();
   }
 
   return (
-    <NextIntlProvider locale={locale} messages={messages[locale]}>
-      <AuthProvider>
-        <VideoProvider>
-          <SiteLayout locale={locale}>{children}</SiteLayout>
-          <Toaster position="top-right" richColors closeButton />
-        </VideoProvider>
-      </AuthProvider>
-    </NextIntlProvider>
+    <NextIntlClientProvider
+      locale={locale}
+      messages={messages}
+      timeZone="Asia/Ho_Chi_Minh"
+    >
+      <ReactQueryProvider>
+        {/* <VideoProvider> */}
+        <SiteLayout locale={locale}>{children}</SiteLayout>
+        <Toaster position="top-right" richColors closeButton />
+        {/* </VideoProvider> */}
+      </ReactQueryProvider>
+    </NextIntlClientProvider>
   );
 }

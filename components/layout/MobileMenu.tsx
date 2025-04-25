@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthSession } from "@/lib/auth/useAuthSession";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
 import { NavLinks } from "./NavLinks";
 import { UserMenu } from "./UserMenu";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/lib/auth/AuthContext";
 
 interface MobileMenuProps {
   locale: string;
@@ -13,7 +14,7 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ locale, isOpen, onClose }: MobileMenuProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthSession();
 
   // Close menu when screen size changes to desktop
   useEffect(() => {
@@ -102,7 +103,15 @@ export function MobileMenu({ locale, isOpen, onClose }: MobileMenuProps) {
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">
                   Account
                 </h3>
-                <UserMenu locale={locale} mobile onClick={onClose} />
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full rounded" />
+                    <Skeleton className="h-8 w-3/4 rounded" />
+                    <Skeleton className="h-8 w-1/2 rounded" />
+                  </div>
+                ) : (
+                  <UserMenu locale={locale} mobile onClick={onClose} />
+                )}
               </motion.div>
 
               {/* Additional mobile-only links */}

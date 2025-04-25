@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { useUploadVideo } from "@/lib/hooks/useVideoQueries";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/auth/AuthContext";
-import { uploadVideo } from "@/lib/api/videoService";
-import ReactPlayer from "react-player";
-import { FileVideo, Upload, X } from "lucide-react";
+import { VideoDropzone } from "./VideoDropzone";
 
 interface VideoUploadFormProps {
   locale: string;
@@ -22,111 +20,54 @@ interface VideoUploadFormProps {
 export function VideoUploadForm({ locale }: VideoUploadFormProps) {
   const t = useTranslations();
   const router = useRouter();
-  const { token } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Tạo URL xem trước khi chọn file
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
-      return;
-    }
+  const uploadMutation = useUploadVideo({
+    onSuccess: (data) => {
+      toast.success(data.message || t("video.upload.uploadSuccess"));
+      setTitle("");
+      setDescription("");
+      setSelectedFile(null);
+      setUploadProgress(0);
+      if (data.videoId) {
+        router.push(`/${locale}/videos/${data.videoId}`);
+      } else {
+        // Có thể revalidate query videos ở đây nếu cần
+        // queryClient.invalidateQueries(['videos']);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || t("video.upload.uploadError"));
+      setUploadProgress(0);
+    },
+    onUploadProgress: (progress) => {
+      setUploadProgress(progress);
+    },
+  });
 
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
+  const isUploading = uploadMutation.isPending;
 
-    // Cleanup function
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [selectedFile]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Kiểm tra định dạng file
-    if (!file.type.includes("video/")) {
-      setErrors((prev) => ({
-        ...prev,
-        file: t("video.upload.invalidFormat"),
-      }));
-      return;
-    }
-
-    // Kiểm tra kích thước file (tối đa 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      setErrors((prev) => ({
-        ...prev,
-        file: t("video.upload.tooLarge"),
-      }));
-      return;
-    }
-
+  const handleFileSelect = (file: File | null) => {
     setSelectedFile(file);
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.file;
-      return newErrors;
-    });
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-
-    // Kiểm tra định dạng file
-    if (!file.type.includes("video/")) {
-      setErrors((prev) => ({
-        ...prev,
-        file: t("video.upload.invalidFormat"),
-      }));
-      return;
+    if (errors.file) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.file;
+        return newErrors;
+      });
     }
-
-    // Kiểm tra kích thước file (tối đa 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      setErrors((prev) => ({
-        ...prev,
-        file: t("video.upload.tooLarge"),
-      }));
-      return;
-    }
-
-    setSelectedFile(file);
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.file;
-      return newErrors;
-    });
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!title.trim()) {
-      newErrors.title = t("video.upload.titleRequired");
-    }
-
-    if (!selectedFile) {
-      newErrors.file = t("video.upload.noFileSelected");
-    }
+    if (!title.trim()) newErrors.title = t("video.upload.titleRequired");
+    if (!selectedFile) newErrors.file = t("video.upload.noFileSelected");
+    if (errors.file) newErrors.file = errors.file;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -135,43 +76,16 @@ export function VideoUploadForm({ locale }: VideoUploadFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !token) {
+    if (!validateForm() || !selectedFile) {
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(0);
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("file", selectedFile as File);
 
-    try {
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
-      formData.append("file", selectedFile as File);
-
-      const video = await uploadVideo(formData, token, (progress) => {
-        setUploadProgress(progress);
-      });
-
-      toast.success(t("video.upload.uploadSuccess"));
-
-      // Chuyển hướng đến trang chi tiết video
-      router.push(`/${locale}/videos/${video.id}`);
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(
-        error instanceof Error ? error.message : t("video.upload.uploadError")
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const clearSelectedFile = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    uploadMutation.mutate(formData);
   };
 
   return (
@@ -208,127 +122,29 @@ export function VideoUploadForm({ locale }: VideoUploadFormProps) {
 
           <div className="space-y-2">
             <Label>{t("video.upload.file")}</Label>
-            {!selectedFile ? (
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors ${
-                errors.file ? "border-destructive" : "border-input"
-              }`}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center">
-                    <Upload className="h-10 w-10 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{t("video.upload.dragDrop")}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {t("video.upload.requirements")}
-                    </p>
-                  </div>
-                </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                  accept="video/*"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={isUploading}
-              />
-            </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10 bg-background/80 rounded-full"
-                    onClick={clearSelectedFile}
-                    disabled={isUploading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-
-                  {previewUrl ? (
-                    <div className="rounded-lg overflow-hidden">
-                      <ReactPlayer
-                        url={previewUrl}
-                        width="100%"
-                        height="auto"
-                        controls
-                        light={false}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-40 bg-muted rounded-lg">
-                      <FileVideo className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    {t("video.upload.changeFile")}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {errors.file && (
-              <p className="text-xs text-destructive">{errors.file}</p>
-            )}
+            <VideoDropzone
+              selectedFile={selectedFile}
+              onFileSelect={handleFileSelect}
+              disabled={isUploading}
+              errorMessage={errors.file}
+            />
           </div>
 
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  {t("video.upload.uploading")}
-                </span>
-                <span className="text-sm">{uploadProgress}%</span>
-              </div>
-              <Progress value={uploadProgress} className="h-2" />
+              <Label>{t("video.upload.progress")}</Label>
+              <Progress value={uploadProgress} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                {uploadProgress}% {t("common.completed")}
+              </p>
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isUploading}>
-            {isUploading ? (
-              <>
-                <span className="mr-2">{t("video.upload.uploading")}</span>
-                <span className="animate-spin">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4"
-                  >
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                </span>
-              </>
-            ) : (
-              t("video.upload.submit")
-            )}
-            </Button>
+          <Button type="submit" disabled={isUploading || !selectedFile}>
+            {isUploading
+              ? t("video.upload.uploading")
+              : t("video.upload.uploadButton")}
+          </Button>
         </form>
       </CardContent>
     </Card>

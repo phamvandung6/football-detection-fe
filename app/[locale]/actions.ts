@@ -1,87 +1,78 @@
 "use server";
 
+import { uploadVideoFile } from '@/lib/api/videoService';
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 // Schema cho form upload
 const uploadFormSchema = z.object({
-  file: z.instanceof(File).optional(),
+  file: z.instanceof(File)
+    .refine((file) => file.size > 0, 'File is required')
+    .refine((file) => file.type.startsWith('video/'), 'File must be a video')
+    .refine((file) => file.size <= 100 * 1024 * 1024, 'File size exceeds 100MB'),
 });
 
-type UploadFormData = z.infer<typeof uploadFormSchema>;
+interface UploadActionResult {
+  success: boolean;
+  message: string;
+  errors?: { file?: string[] };
+  videoId?: string;
+}
 
 /**
  * Server Action để xử lý upload video
+ * Nó gọi hàm uploadVideoFile từ service API
  */
-export async function uploadVideo(formData: FormData) {
+export async function uploadVideoAction(
+  prevState: UploadActionResult | undefined,
+  formData: FormData
+): Promise<UploadActionResult> {
+  // Lấy file từ FormData
+  const file = formData.get('file');
+
+  // Validate file bằng Zod
+  const validatedFields = uploadFormSchema.safeParse({ file });
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      message: 'Invalid file data.',
+      errors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+
   try {
-    // Lấy file từ FormData
-    const file = formData.get("file") as File | null;
+    // TODO: Xác thực - Lấy token từ cookie nếu API upload yêu cầu.
+    // Ví dụ:
+    // const token = cookies().get('auth_token')?.value;
+    // if (!token) { throw new Error('Unauthorized'); } 
+    // => Sau đó truyền token vào uploadVideoFile(uploadData, token);
 
-    // Validate dữ liệu
-    const validatedFields = uploadFormSchema.safeParse({
-      file,
-    });
+    const uploadData = new FormData();
+    uploadData.append('file', validatedFields.data.file);
+    
+    // Gọi hàm upload từ service (chưa truyền token)
+    const result = await uploadVideoFile(uploadData);
 
-    // Nếu validation thất bại, trả về lỗi
-    if (!validatedFields.success) {
-      return {
-        success: false,
-        message: "Invalid form data",
-        errors: validatedFields.error.flatten().fieldErrors,
-      };
+    if (!result.success) {
+      throw new Error(result.message);
     }
 
-    // Nếu không có file, trả về lỗi
-    if (!file || file.size === 0) {
-      return {
-        success: false,
-        message: "No file selected",
-      };
-    }
-
-    // Kiểm tra loại file
-    if (!file.type.startsWith("video/")) {
-      return {
-        success: false,
-        message: "File must be a video",
-      };
-    }
-
-    // Kiểm tra kích thước file (giới hạn 100MB)
-    const maxSize = 100 * 1024 * 1024; // 100MB
-    if (file.size > maxSize) {
-      return {
-        success: false,
-        message: "File size exceeds 100MB limit",
-      };
-    }
-
-    // TODO: Xử lý upload file lên server
-    // Đây là nơi bạn sẽ thêm logic để lưu file vào storage
-    console.log("Processing file:", file.name, file.size, file.type);
-
-    // Giả lập xử lý upload (trong thực tế, bạn sẽ upload file lên server)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Revalidate path để cập nhật UI
-    revalidatePath("/[locale]/dashboard");
+    // Revalidate path để cập nhật UI (ví dụ: trang dashboard hoặc video list)
+    revalidatePath("/[locale]/dashboard", 'page'); 
+    revalidatePath("/[locale]/videos", 'page');
 
     // Trả về kết quả thành công
     return {
       success: true,
-      message: "File uploaded successfully",
-      fileInfo: {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      },
+      message: result.message || "File uploaded successfully",
+      videoId: result.videoId,
     };
   } catch (error) {
-    console.error("Error uploading file:", error);
+    console.error("Error in uploadVideoAction:", error);
     return {
       success: false,
-      message: "An error occurred while uploading the file",
+      message: error instanceof Error ? error.message : "An error occurred during upload.",
     };
   }
 }

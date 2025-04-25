@@ -1,27 +1,11 @@
 import { defaultLocale, locales } from "@/lib/i18n/locales";
-import { jwtDecode } from "jwt-decode";
-import createIntlMiddleware from "next-intl/middleware";
+import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 
-// Định nghĩa kiểu dữ liệu cho payload của token
-interface TokenPayload {
-  sub: string;
-  email: string;
-  is_admin: boolean;
-  exp: number;
-}
-
-// Danh sách các route công khai (không cần đăng nhập)
-// Bao gồm cả trang chủ có locale
+// === Cấu hình Route ===
 const publicRoutes = ["/"];
-
-// Danh sách các route auth (chỉ cho phép khi chưa đăng nhập)
 const authRoutes = ["/auth/login", "/auth/register", "/auth/forgot-password"];
-
-// Danh sách các route yêu cầu đăng nhập
-const protectedRoutes = ["/upload", "/videos"];
-
-// Danh sách các route chỉ dành cho admin
+const protectedRoutes = ["/dashboard", "/upload", "/videos"];
 const adminRoutes = [
   "/admin",
   "/admin/users",
@@ -29,246 +13,213 @@ const adminRoutes = [
   "/admin/settings",
 ];
 
-// Hàm kiểm tra token có hợp lệ không
-function isValidToken(token: string): {
-  isValid: boolean;
-  payload?: TokenPayload;
-  error?: string;
+// === Regex để bỏ qua các đường dẫn ===
+const PUBLIC_FILE = /\.(.*)$/;
+const SKIPPED_PATHS = ["/api/", "/_next/"];
+
+// === Hàm tiện ích ===
+
+// Hàm kiểm tra route có match với pattern không (Đã cập nhật logic)
+function matchPathname(
+  pathname: string,
+  patterns: string[]
+): {
+  match: boolean;
+  pathnameWithoutLocale: string;
 } {
-  try {
-    const decoded = jwtDecode<TokenPayload>(token);
+  let pathnameWithoutLocale = pathname;
+  const detectedLocale = locales.find((loc) => pathname.startsWith(`/${loc}/`));
 
-    // Kiểm tra các trường bắt buộc của token
-    if (
-      !decoded.sub ||
-      !decoded.email ||
-      typeof decoded.is_admin !== "boolean"
-    ) {
-      return { isValid: false, error: "Missing required fields in token" };
-    }
-
-    // Kiểm tra token hết hạn
-    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      return { isValid: false, error: "Token has expired" };
-    }
-
-    return { isValid: true, payload: decoded };
-  } catch (error) {
-    console.error("[Token Validation Error]:", error);
-    return { isValid: false, error: "Invalid token format" };
-  }
-}
-
-// Hàm kiểm tra route có match với pattern không
-function matchRoute(pathname: string, patterns: string[]): boolean {
-  // Xóa locale prefix nếu có (ví dụ: /vi/dashboard -> /dashboard)
-  const pathWithoutLocale = pathname.replace(/^\/[^/]+\//, "/");
-
-  // Nếu pathname sau khi xóa locale là rỗng hoặc chỉ có "/", chỉ match với "/"
-  if (pathWithoutLocale === "" || pathWithoutLocale === "/") {
-    return patterns.includes("/");
+  if (detectedLocale) {
+    pathnameWithoutLocale =
+      pathname.substring(detectedLocale.length + 1) || "/";
+  } else if (
+    pathname.startsWith("/") &&
+    locales.includes(pathname.substring(1) as any) &&
+    pathname.length === 3
+  ) {
+    pathnameWithoutLocale = "/";
   }
 
-  return patterns.some((route) => {
-    // Xử lý đặc biệt cho root path "/"
-    if (route === "/" && pathWithoutLocale !== "/") {
-      return false;
-    }
-    return (
-      pathWithoutLocale === route || pathWithoutLocale.startsWith(route + "/")
-    );
-  });
-}
-
-// Tạo middleware cho i18n - đặt ở đây để có thể sử dụng trong middleware chính
-const intlMiddleware = createIntlMiddleware({
-  locales: locales,
-  defaultLocale,
-  localePrefix: "always", // Luôn sử dụng prefix locale để tránh redirect loop
-});
-
-// Hàm lấy locale từ pathname
-function getLocaleFromPath(pathname: string): string {
-  for (const locale of locales) {
-    if (pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`) {
-      return locale;
-    }
+  let isMatch = false;
+  if (pathnameWithoutLocale === "/") {
+    isMatch = patterns.includes("/");
+  } else {
+    isMatch = patterns.some((route) => {
+      if (route === "/" && pathnameWithoutLocale !== "/") return false;
+      return (
+        pathnameWithoutLocale === route ||
+        pathnameWithoutLocale.startsWith(route + "/")
+      );
+    });
   }
-  return defaultLocale;
+  return { match: isMatch, pathnameWithoutLocale };
 }
 
-// Hàm kiểm tra xem pathname có chứa locale không
-function hasLocaleInPath(pathname: string): boolean {
-  return locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
-}
-
-// Hàm kiểm tra xem pathname có phải là trang chủ có locale không
-function isHomePageWithLocale(pathname: string): boolean {
-  return locales.some((locale) => pathname === `/${locale}`);
-}
-
-// Hàm kiểm tra và sửa callbackUrl để tránh redirect loop
+// Hàm sanitize callbackUrl (Đã cập nhật logic)
 function sanitizeCallbackUrl(callbackUrl: string | null): string | null {
   if (!callbackUrl) return null;
-
   try {
-    // Giải mã URL nếu đã được mã hóa
     const decodedUrl = decodeURIComponent(callbackUrl);
+    const urlObject = new URL(decodedUrl, "http://localhost"); // Cần base URL giả để parse
+    let pathWithoutLocale = urlObject.pathname;
 
-    // Kiểm tra xem callbackUrl có chứa đường dẫn auth không
-    if (decodedUrl.includes("/auth/")) {
+    const detectedLocale = locales.find((loc) =>
+      pathWithoutLocale.startsWith(`/${loc}/`)
+    );
+    if (detectedLocale) {
+      pathWithoutLocale =
+        pathWithoutLocale.substring(detectedLocale.length + 1) || "/";
+    } else if (
+      pathWithoutLocale.startsWith("/") &&
+      locales.includes(pathWithoutLocale.substring(1) as any) &&
+      pathWithoutLocale.length === 3
+    ) {
+      pathWithoutLocale = "/";
+    }
+
+    if (
+      authRoutes.some(
+        (route) =>
+          pathWithoutLocale === route ||
+          pathWithoutLocale.startsWith(route + "/")
+      )
+    ) {
+      console.warn(
+        "[Sanitize Callback] Removing callbackUrl pointing to auth route:",
+        decodedUrl
+      );
       return null;
     }
-
-    // Kiểm tra xem callbackUrl có chứa locale trùng lặp không
-    for (const locale of locales) {
-      const duplicateLocalePattern = new RegExp(`/${locale}/${locale}/`);
-      if (duplicateLocalePattern.test(decodedUrl)) {
-        // Loại bỏ locale trùng lặp
-        return decodedUrl.replace(duplicateLocalePattern, `/${locale}/`);
-      }
-    }
-
     return decodedUrl;
   } catch (error) {
-    console.error("Error sanitizing callback URL:", error);
+    console.error(
+      "[Sanitize Callback Error]:",
+      error,
+      "Original URL:",
+      callbackUrl
+    );
     return null;
   }
 }
 
+// === Middleware chính ===
+
+// Định nghĩa cấu hình i18n một lần
+const i18nConfig = {
+  locales,
+  defaultLocale,
+  localePrefix: "always" as const,
+};
+
+// Tạo middleware i18n
+const handleI18nRouting = createMiddleware(i18nConfig);
+
 export default async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
-  console.log("[Middleware] Processing request:", pathname);
+  // --- Bước 1: Để next-intl xử lý routing và locale trước ---
+  // Nó sẽ tự động redirect từ '/' sang '/{locale}' nếu localePrefix là 'always'
+  // và xử lý các prefix locale khác.
+  const i18nResponse = handleI18nRouting(request);
 
-  // Kiểm tra xem có phải là trang chủ có locale không
-  const isHomePage = isHomePageWithLocale(pathname);
+  // Nếu next-intl trả về một response (ví dụ: redirect), trả về nó ngay lập tức.
+  // Lưu ý: Kiểm tra response có tồn tại và có status code là redirect (3xx) hoặc rewrite (200 nhưng có header x-middleware-rewrite)
+  // Cách kiểm tra đơn giản nhất là xem nó có phải là NextResponse không và có header đặc biệt không,
+  // nhưng thường thì nếu next-intl cần làm gì đó, nó sẽ trả về một response khác với request ban đầu.
+  // Để đơn giản, chúng ta có thể giả định nếu nó trả về response, thì đó là response cuối cùng từ góc độ i18n.
+  // Tuy nhiên, cần cẩn thận vì nó có thể chỉ rewrite URL trong request mà không trả về response mới.
+  // -> Cách an toàn hơn là thực hiện logic auth SAU KHI i18n đã chạy và có thể đã sửa đổi request.
 
-  // Nếu là trang chủ có locale, cho phép truy cập mà không cần kiểm tra thêm
-  if (isHomePage) {
-    return intlMiddleware(request);
+  // Chạy i18n middleware để nó có thể sửa đổi request (ví dụ: thêm locale vào nextUrl)
+  // Chúng ta sẽ không return response từ đây ngay mà để logic auth quyết định.
+  // i18nMiddleware(request); // Gọi lại hàm gốc có vẻ không đúng nếu dùng createMiddleware
+
+  // --> Cách tiếp cận tốt hơn: Để i18n chạy và lấy response/request đã được sửa đổi từ nó.
+  const response = handleI18nRouting(request);
+
+  // Nếu i18n thực hiện redirect (ví dụ: từ / sang /en), response.headers sẽ có 'location'.
+  if (response.headers.has("location")) {
+    console.log(
+      "[Middleware] i18n redirected request. Returning i18n response."
+    );
+    return response; // Trả về redirect của i18n
   }
+  // Nếu i18n chỉ rewrite URL (ví dụ: thêm locale), response sẽ là request đã sửa đổi.
 
-  // Kiểm tra và xử lý callbackUrl để tránh redirect loop
-  const callbackUrl = searchParams.get("callbackUrl");
-  const sanitizedCallback = sanitizeCallbackUrl(callbackUrl);
-
-  // Nếu callbackUrl không hợp lệ hoặc đã được sửa đổi, tạo URL mới không có callbackUrl
-  if (
-    callbackUrl &&
-    (!sanitizedCallback || sanitizedCallback !== callbackUrl)
-  ) {
-    const newUrl = new URL(request.nextUrl.pathname, request.url);
-
-    // Sao chép tất cả các query params ngoại trừ callbackUrl
-    searchParams.forEach((value, key) => {
-      if (key !== "callbackUrl") {
-        newUrl.searchParams.set(key, value);
-      }
-    });
-
-    // Thêm callbackUrl đã được sửa nếu có
-    if (sanitizedCallback) {
-      newUrl.searchParams.set("callbackUrl", sanitizedCallback);
-    }
-
-    return NextResponse.redirect(newUrl);
-  }
-
-  // Xử lý locale trong URL
-  if (!hasLocaleInPath(pathname) && pathname !== "/") {
-    // Nếu URL không có locale, thêm locale mặc định vào URL
-    const newUrl = new URL(`/${defaultLocale}${pathname}`, request.url);
-
-    // Sao chép tất cả các query params
-    searchParams.forEach((value, key) => {
-      newUrl.searchParams.set(key, value);
-    });
-
-    return NextResponse.redirect(newUrl);
-  }
-
-  // Lấy locale từ URL
-  const locale = getLocaleFromPath(pathname);
-
-  // Lấy token từ cookie
+  // --- Bước 2: Logic xác thực và chuyển hướng tùy chỉnh (chạy sau i18n) ---
   const token = request.cookies.get("auth_token")?.value;
+  // Lấy thông tin từ request CÓ THỂ đã được i18n sửa đổi
+  const currentFullUrl = request.url;
+  const currentPathname = request.nextUrl.pathname; // Pathname này có thể đã có locale prefix
+  const effectiveLocale = request.nextUrl.locale || defaultLocale; // Lấy locale mà i18n đã xác định
 
-  // Kiểm tra các loại route
-  const isAuthRoute = matchRoute(pathname, authRoutes);
-  const isPublicRoute = matchRoute(pathname, publicRoutes);
-  const isProtectedRoute = matchRoute(pathname, protectedRoutes);
-  const isAdminRoute = matchRoute(pathname, adminRoutes);
+  const { match: isAuthRoute, pathnameWithoutLocale } = matchPathname(
+    currentPathname,
+    authRoutes
+  );
+  const { match: isPublicRoute } = matchPathname(currentPathname, publicRoutes);
+  const { match: isProtectedRoute } = matchPathname(
+    currentPathname,
+    protectedRoutes
+  );
+  const { match: isAdminRoute } = matchPathname(currentPathname, adminRoutes);
 
-  // Nếu đã đăng nhập và cố truy cập route auth, chuyển hướng về trang chủ
+  console.log(
+    `[Middleware] After i18n: Path=${currentPathname}, Path w/o locale=${pathnameWithoutLocale}, Locale=${effectiveLocale}`
+  );
+  console.log(
+    `[Middleware] Route checks: Auth=${isAuthRoute}, Public=${isPublicRoute}, Protected=${isProtectedRoute}, Admin=${isAdminRoute}`
+  );
+
+  // Xử lý Callback URL (có thể giữ nguyên)
+  const originalCallbackUrl = request.nextUrl.searchParams.get("callbackUrl");
+  const sanitizedCallback = sanitizeCallbackUrl(originalCallbackUrl);
+
+  if (originalCallbackUrl && sanitizedCallback !== originalCallbackUrl) {
+    console.log(
+      `[Middleware] Sanitizing callbackUrl: "${originalCallbackUrl}" -> "${sanitizedCallback}"`
+    );
+    const newUrl = new URL(currentPathname, currentFullUrl);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      if (key !== "callbackUrl") newUrl.searchParams.set(key, value);
+    });
+    if (sanitizedCallback)
+      newUrl.searchParams.set("callbackUrl", sanitizedCallback);
+    return NextResponse.redirect(newUrl); // Redirect ngay
+  }
+
+  // Logic chuyển hướng chính
   if (token && isAuthRoute) {
-    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    console.log("[Middleware] Redirecting logged-in user from auth route.");
+    // Chuyển hướng về trang gốc có locale
+    return NextResponse.redirect(new URL(`/${effectiveLocale}`, request.url));
   }
 
-  // Nếu là route công khai hoặc route auth, cho phép truy cập
-  if (isPublicRoute || isAuthRoute) {
-    return intlMiddleware(request);
-  }
-
-  // Nếu không có token, chuyển hướng đến trang đăng nhập
-  if (!token) {
-    const loginUrl = new URL(`/${locale}/auth/login`, request.url);
-
-    // Chỉ thêm callbackUrl nếu không phải là trang auth và là đường dẫn hợp lệ
-    if (!isAuthRoute && pathname !== `/${locale}/auth/login`) {
-      // Lưu đường dẫn hiện tại làm callbackUrl, đảm bảo giữ nguyên locale
-      loginUrl.searchParams.set("callbackUrl", pathname);
+  if (!token && (isProtectedRoute || isAdminRoute)) {
+    console.log(
+      "[Middleware] No token, redirecting to login for protected/admin route."
+    );
+    const loginUrl = new URL(`/${effectiveLocale}/auth/login`, request.url);
+    const validCallback = sanitizeCallbackUrl(currentFullUrl); // Dùng URL hiện tại (có thể đã có locale)
+    if (validCallback) {
+      loginUrl.searchParams.set("callbackUrl", validCallback);
+      console.log(
+        `[Middleware] Adding callbackUrl to login redirect: ${validCallback}`
+      );
     }
-
     return NextResponse.redirect(loginUrl);
   }
 
-  // Kiểm tra token có hợp lệ không
-  const { isValid, payload, error } = isValidToken(token);
-
-  if (!isValid) {
-    // Log chi tiết lỗi để dễ debug
-    console.error("[Middleware] Token validation failed:", {
-      error,
-      pathname,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : "no token",
-    });
-
-    // Nếu token không hợp lệ, xóa token và chuyển hướng đến trang đăng nhập
-    const response = NextResponse.redirect(
-      new URL(`/${locale}/auth/login`, request.url)
-    );
-    response.cookies.delete("auth_token");
-    return response;
-  }
-
-  // Nếu là route admin, kiểm tra quyền admin
-  if (isAdminRoute) {
-    console.log("[Middleware] Admin route access:", {
-      pathname,
-      isAdmin: payload?.is_admin,
-      userEmail: payload?.email,
-    });
-
-    // Kiểm tra quyền admin từ payload đã được validate
-    if (!payload?.is_admin) {
-      console.warn(
-        "[Middleware] Access denied - Not an admin:",
-        payload?.email
-      );
-      return NextResponse.redirect(new URL(`/${locale}`, request.url));
-    }
-  }
-
-  // Xử lý i18n và trả về response cho tất cả các route khác
-  return intlMiddleware(request);
+  // Nếu không có redirect nào ở trên, trả về response gốc từ i18n
+  // (có thể đã được rewrite hoặc là NextResponse.next() ngầm định)
+  console.log(
+    "[Middleware] No auth redirect needed. Allowing request processed by i18n to proceed for path:",
+    currentPathname
+  );
+  return response; // Trả về response cuối cùng (có thể là request đã rewrite hoặc response gốc)
 }
 
+// Đảm bảo bạn có export config.matcher phù hợp
 export const config = {
-  // Match all pathnames except for
-  // - ... files in the public folder
-  // - ... files with extensions (e.g. favicon.ico)
-  // - ... API routes
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // Matcher chuẩn, không loại trừ '/'
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

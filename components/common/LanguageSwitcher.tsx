@@ -1,16 +1,16 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { Locale, localeNames, locales } from "@/lib/i18n/locales";
 import { Globe } from "lucide-react";
-import { locales, localeNames, Locale } from "@/lib/i18n/locales";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 interface LanguageSwitcherProps {
   locale: string;
@@ -27,7 +27,7 @@ export function LanguageSwitcher({ locale, pathname }: LanguageSwitcherProps) {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={t("common.language")}>
           <Globe className="h-5 w-5" />

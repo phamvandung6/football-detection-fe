@@ -157,6 +157,10 @@
   }
 }
 
+html {
+  overflow-y: scroll;
+}
+
 /* Cards with hover effect */
 .hover-card {
   @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;

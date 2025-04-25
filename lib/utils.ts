@@ -7,11 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 
 // Centralized API URL configuration
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 // Static URL for direct access to static files
 export const STATIC_URL =
-  process.env.NEXT_PUBLIC_STATIC_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_STATIC_URL || "http://localhost:8080";
 
 /**
  * Format bytes to human readable format
