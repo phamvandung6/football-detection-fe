@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "@/lib/i18n/navigation";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
@@ -119,7 +119,7 @@ export function AuthForm({ type, locale }: AuthFormProps) {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">{t("auth.password")}</Label>
                   <Link
-                    href={`/${locale}/auth/forgot-password`}
+                    href="/auth/forgot-password"
                     className="text-xs text-primary"
                   >
                     {t("auth.forgotPassword")}
@@ -175,7 +175,7 @@ export function AuthForm({ type, locale }: AuthFormProps) {
       <p className="px-8 text-center text-sm text-muted-foreground">
         {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}{" "}
         <Link
-          href={`/${locale}/auth/${isLogin ? "register" : "login"}`}
+          href={`/auth/${isLogin ? "register" : "login"}`}
           className="underline underline-offset-4 hover:text-primary"
         >
           {isLogin ? t("auth.register") : t("auth.login")}

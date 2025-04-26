@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 interface LogoProps {
   locale: string;
@@ -13,7 +13,7 @@ export function Logo({ locale }: LogoProps) {
 
   return (
     <Link
-      href={`/${locale}`}
+      href="/"
       className="text-xl font-bold flex items-center gap-2 transition-transform hover:scale-105"
     >
       <FootballIcon className="h-6 w-6 text-primary animate-pulse-slow" />

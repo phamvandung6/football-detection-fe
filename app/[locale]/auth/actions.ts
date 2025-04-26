@@ -55,6 +55,12 @@ export async function loginAction(
   // Lấy locale từ form data hoặc mặc định là 'en'
   const locale = formData.get("locale")?.toString() || "en";
 
+  console.log(`[loginAction] Received locale from form: ${locale}`);
+  console.log(
+    `[loginAction] FormData entries:`,
+    Object.fromEntries(formData.entries())
+  );
+
   // Lấy các hàm dịch từ next-intl
   const t = await getTranslations({ locale, namespace: "auth" });
   const commonT = await getTranslations({ locale, namespace: "common" });
@@ -100,7 +106,9 @@ export async function loginAction(
 
     // Revalidate và redirect
     revalidatePath("/", "layout");
-    redirect(`/${locale}/dashboard`);
+
+    // Không bao gồm redirect trong try-catch để tránh bắt lỗi NEXT_REDIRECT
+    console.log(`[loginAction] Redirecting to /${locale}/upload`);
   } catch (error) {
     console.error("[LOGIN_ACTION_ERROR]", error);
     await deleteAuthCookies();
@@ -109,6 +117,9 @@ export async function loginAction(
       message: error instanceof Error ? error.message : t("loginError"),
     };
   }
+
+  // Đặt redirect bên ngoài khối try-catch để nó có thể hoạt động đúng cách
+  redirect(`/${locale}/upload`);
 }
 
 export async function registerAction(
@@ -165,7 +176,8 @@ export async function registerAction(
 
     // Revalidate và redirect
     revalidatePath("/", "layout");
-    redirect(`/${locale}/dashboard`);
+    // Ghi log về việc redirect
+    console.log(`[registerAction] Redirecting to /${locale}/dashboard`);
   } catch (error) {
     console.error("[REGISTER_ACTION_ERROR]", error);
     await deleteAuthCookies();
@@ -174,11 +186,17 @@ export async function registerAction(
       message: error instanceof Error ? error.message : t("registerError"),
     };
   }
+
+  // Đặt redirect bên ngoài khối try-catch để nó có thể hoạt động đúng cách
+  redirect(`/${locale}/dashboard`);
 }
 
 export async function logoutAction(locale: string = "en") {
   // Xóa cookie
   await deleteAuthCookies();
   revalidatePath("/", "layout");
+  // Ghi log về việc redirect
+  console.log(`[logoutAction] Redirecting to /${locale}/auth/login`);
+  // Sử dụng redirect của Next.js và chỉ định rõ đường dẫn có locale
   redirect(`/${locale}/auth/login`);
 }

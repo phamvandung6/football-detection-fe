@@ -1,11 +1,11 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/common/ProtectedRoute";
+import { ReactNode } from "react";
 
-export default function VideosLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+interface VideosLayoutProps {
+  children: ReactNode;
+}
+
+export default function VideosLayout({ children }: VideosLayoutProps) {
+  return <>{children}</>;
 }

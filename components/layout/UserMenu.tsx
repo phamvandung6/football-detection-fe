@@ -4,11 +4,11 @@ import { logoutAction } from "@/app/[locale]/auth/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthSession } from "@/lib/auth/useAuthSession";
 import { usePermissions } from "@/lib/auth/usePermissions";
@@ -37,9 +37,7 @@ export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="h-10 w-24 animate-pulse rounded-md bg-muted"></div>
-    );
+    return <div className="h-10 w-24 animate-pulse rounded-md bg-muted"></div>;
   }
 
   if (mobile) {
@@ -62,7 +60,9 @@ export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{user.name || user.username}</p>
+                <p className="text-sm font-medium">
+                  {user.name || user.username}
+                </p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
@@ -142,7 +142,7 @@ export function UserMenu({ locale, mobile = false, onClick }: UserMenuProps) {
   return (
     <div>
       {isAuthenticated && user ? (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <motion.button
               className="flex items-center gap-2 rounded-full border p-1 pr-3 hover:bg-accent"

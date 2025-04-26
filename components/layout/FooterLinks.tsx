@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { motion } from "framer-motion";
 
 interface FooterLinksProps {
@@ -44,7 +43,7 @@ function FooterLink({ locale, href, label }: FooterLinkProps) {
       transition={{ type: "spring", stiffness: 300 }}
     >
       <Link
-        href={`/${locale}${href}`}
+        href={href}
         className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
       >
         <ChevronRightIcon />

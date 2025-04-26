@@ -1,6 +1,6 @@
-import { defaultLocale, locales } from "@/lib/i18n/locales";
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
+import { defaultLocale, locales } from "./lib/i18n/locales";
 
 // === Cấu hình Route ===
 const publicRoutes = ["/"];
@@ -109,117 +109,87 @@ function sanitizeCallbackUrl(callbackUrl: string | null): string | null {
 const i18nConfig = {
   locales,
   defaultLocale,
-  localePrefix: "always" as const,
+  localePrefix: "as-needed" as const,
 };
 
 // Tạo middleware i18n
 const handleI18nRouting = createMiddleware(i18nConfig);
 
 export default async function middleware(request: NextRequest) {
-  // --- Bước 1: Để next-intl xử lý routing và locale trước ---
-  // Nó sẽ tự động redirect từ '/' sang '/{locale}' nếu localePrefix là 'always'
-  // và xử lý các prefix locale khác.
-  const i18nResponse = handleI18nRouting(request);
+  const pathname = request.nextUrl.pathname;
+  console.log(`[middleware] Request path: ${pathname}`);
 
-  // Nếu next-intl trả về một response (ví dụ: redirect), trả về nó ngay lập tức.
-  // Lưu ý: Kiểm tra response có tồn tại và có status code là redirect (3xx) hoặc rewrite (200 nhưng có header x-middleware-rewrite)
-  // Cách kiểm tra đơn giản nhất là xem nó có phải là NextResponse không và có header đặc biệt không,
-  // nhưng thường thì nếu next-intl cần làm gì đó, nó sẽ trả về một response khác với request ban đầu.
-  // Để đơn giản, chúng ta có thể giả định nếu nó trả về response, thì đó là response cuối cùng từ góc độ i18n.
-  // Tuy nhiên, cần cẩn thận vì nó có thể chỉ rewrite URL trong request mà không trả về response mới.
-  // -> Cách an toàn hơn là thực hiện logic auth SAU KHI i18n đã chạy và có thể đã sửa đổi request.
-
-  // Chạy i18n middleware để nó có thể sửa đổi request (ví dụ: thêm locale vào nextUrl)
-  // Chúng ta sẽ không return response từ đây ngay mà để logic auth quyết định.
-  // i18nMiddleware(request); // Gọi lại hàm gốc có vẻ không đúng nếu dùng createMiddleware
-
-  // --> Cách tiếp cận tốt hơn: Để i18n chạy và lấy response/request đã được sửa đổi từ nó.
+  // Khởi tạo i18n middleware
   const response = handleI18nRouting(request);
+  const effectiveLocale =
+    response.headers.get("x-middleware-request-nextintl-locale") ||
+    defaultLocale;
+  console.log(`[middleware] Effective locale: ${effectiveLocale}`);
 
-  // Nếu i18n thực hiện redirect (ví dụ: từ / sang /en), response.headers sẽ có 'location'.
-  if (response.headers.has("location")) {
-    console.log(
-      "[Middleware] i18n redirected request. Returning i18n response."
-    );
-    return response; // Trả về redirect của i18n
-  }
-  // Nếu i18n chỉ rewrite URL (ví dụ: thêm locale), response sẽ là request đã sửa đổi.
-
-  // --- Bước 2: Logic xác thực và chuyển hướng tùy chỉnh (chạy sau i18n) ---
-  const token = request.cookies.get("auth_token")?.value;
-  // Lấy thông tin từ request CÓ THỂ đã được i18n sửa đổi
-  const currentFullUrl = request.url;
-  const currentPathname = request.nextUrl.pathname; // Pathname này có thể đã có locale prefix
-  const effectiveLocale = request.nextUrl.locale || defaultLocale; // Lấy locale mà i18n đã xác định
-
-  const { match: isAuthRoute, pathnameWithoutLocale } = matchPathname(
-    currentPathname,
-    authRoutes
-  );
-  const { match: isPublicRoute } = matchPathname(currentPathname, publicRoutes);
-  const { match: isProtectedRoute } = matchPathname(
-    currentPathname,
-    protectedRoutes
-  );
-  const { match: isAdminRoute } = matchPathname(currentPathname, adminRoutes);
-
+  // Set X-NEXT-INTL-LOCALE header cho server actions
+  response.headers.set("X-NEXT-INTL-LOCALE", effectiveLocale);
   console.log(
-    `[Middleware] After i18n: Path=${currentPathname}, Path w/o locale=${pathnameWithoutLocale}, Locale=${effectiveLocale}`
+    `[middleware] Set X-NEXT-INTL-LOCALE header: ${response.headers.get(
+      "X-NEXT-INTL-LOCALE"
+    )}`
   );
+
+  // Kiểm tra xác thực bằng cách đọc trực tiếp từ cookie
+  const authToken = request.cookies.get("auth_token")?.value;
+  const isAuthenticated = !!authToken;
   console.log(
-    `[Middleware] Route checks: Auth=${isAuthRoute}, Public=${isPublicRoute}, Protected=${isProtectedRoute}, Admin=${isAdminRoute}`
+    `[middleware] Authentication status: ${
+      isAuthenticated ? "Authenticated" : "Not authenticated"
+    }`
   );
+  console.log(`[middleware] Auth token exists: ${!!authToken}`);
 
-  // Xử lý Callback URL (có thể giữ nguyên)
-  const originalCallbackUrl = request.nextUrl.searchParams.get("callbackUrl");
-  const sanitizedCallback = sanitizeCallbackUrl(originalCallbackUrl);
+  // Xây dựng URL mới nếu cần redirect (để giữ locale)
+  const newUrl = request.nextUrl.clone();
 
-  if (originalCallbackUrl && sanitizedCallback !== originalCallbackUrl) {
-    console.log(
-      `[Middleware] Sanitizing callbackUrl: "${originalCallbackUrl}" -> "${sanitizedCallback}"`
-    );
-    const newUrl = new URL(currentPathname, currentFullUrl);
-    request.nextUrl.searchParams.forEach((value, key) => {
-      if (key !== "callbackUrl") newUrl.searchParams.set(key, value);
-    });
-    if (sanitizedCallback)
-      newUrl.searchParams.set("callbackUrl", sanitizedCallback);
-    return NextResponse.redirect(newUrl); // Redirect ngay
-  }
-
-  // Logic chuyển hướng chính
-  if (token && isAuthRoute) {
-    console.log("[Middleware] Redirecting logged-in user from auth route.");
-    // Chuyển hướng về trang gốc có locale
-    return NextResponse.redirect(new URL(`/${effectiveLocale}`, request.url));
-  }
-
-  if (!token && (isProtectedRoute || isAdminRoute)) {
-    console.log(
-      "[Middleware] No token, redirecting to login for protected/admin route."
-    );
-    const loginUrl = new URL(`/${effectiveLocale}/auth/login`, request.url);
-    const validCallback = sanitizeCallbackUrl(currentFullUrl); // Dùng URL hiện tại (có thể đã có locale)
-    if (validCallback) {
-      loginUrl.searchParams.set("callbackUrl", validCallback);
-      console.log(
-        `[Middleware] Adding callbackUrl to login redirect: ${validCallback}`
-      );
-    }
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Nếu không có redirect nào ở trên, trả về response gốc từ i18n
-  // (có thể đã được rewrite hoặc là NextResponse.next() ngầm định)
-  console.log(
-    "[Middleware] No auth redirect needed. Allowing request processed by i18n to proceed for path:",
-    currentPathname
+  // 1. Kiểm tra các route cần xác thực
+  const isProtectedRoute = protectedRoutes.some(
+    (route) =>
+      pathname.startsWith(`/${effectiveLocale}${route}`) ||
+      pathname.startsWith(route)
   );
-  return response; // Trả về response cuối cùng (có thể là request đã rewrite hoặc response gốc)
+  console.log(`[middleware] Is protected route: ${isProtectedRoute}`);
+
+  // 2. Kiểm tra các route chỉ dành cho người dùng chưa đăng nhập
+  const isPublicOnlyRoute = authRoutes.some(
+    (route) =>
+      pathname.startsWith(`/${effectiveLocale}${route}`) ||
+      pathname.startsWith(route)
+  );
+  console.log(`[middleware] Is public-only route: ${isPublicOnlyRoute}`);
+
+  // Người dùng chưa đăng nhập nhưng đang cố truy cập route được bảo vệ
+  if (isProtectedRoute && !isAuthenticated) {
+    console.log(
+      `[middleware] Redirecting unauthenticated user from protected route to login`
+    );
+    newUrl.pathname = `/${effectiveLocale}/auth/login`;
+    return NextResponse.redirect(newUrl);
+  }
+
+  // Người dùng đã đăng nhập nhưng đang cố truy cập các route chỉ dành cho người chưa đăng nhập
+  if (isPublicOnlyRoute && isAuthenticated) {
+    console.log(
+      `[middleware] Redirecting authenticated user from public-only route to home`
+    );
+    newUrl.pathname = `/${effectiveLocale}`;
+    return NextResponse.redirect(newUrl);
+  }
+
+  // Trả về response với header X-NEXT-INTL-LOCALE đã được thiết lập
+  return response;
 }
 
 // Đảm bảo bạn có export config.matcher phù hợp
 export const config = {
-  // Matcher chuẩn, không loại trừ '/'
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Matcher cập nhật để loại trừ tài nguyên tĩnh
+  matcher: [
+    // Áp dụng cho tất cả các đường dẫn trừ những đường dẫn tĩnh/api
+    "/((?!api|_next/static|_next/image|images|videos|favicon.ico|robots.txt|sitemap.xml).*)",
+  ],
 };

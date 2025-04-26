@@ -3,9 +3,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthSession } from "@/lib/auth/useAuthSession";
 import { NAVIGATION_ROUTES } from "@/lib/constants/navigation";
+import { Link } from "@/lib/i18n/navigation";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface NavLinksProps {
@@ -35,7 +35,7 @@ const NavLinkItem = ({
   if (mobile) {
     return (
       <Link
-        href={`/${locale}${href}`}
+        href={href}
         className="text-sm font-medium transition-colors hover:text-primary"
         onClick={onClick}
       >
@@ -46,7 +46,7 @@ const NavLinkItem = ({
 
   return (
     <Link
-      href={`/${locale}${href}`}
+      href={href}
       className={`text-sm font-medium transition-all duration-200 hover:text-primary relative 
         ${isActive ? "text-primary font-semibold" : ""}
       `}

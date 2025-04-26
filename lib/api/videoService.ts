@@ -62,11 +62,13 @@ export interface Detection {
 /**
  * Fetch danh sách videos
  */
-export const getVideos = async (): Promise<Video[]> => {
+export const getVideos = async (token: string): Promise<Video[]> => {
   try {
-    // TODO: Xác thực - Nếu API videos yêu cầu auth, cần lấy token 
-    // (từ cookie server-side hoặc session client-side) và thêm vào header request.
-    const response = await axios.get<{ data: Video[] }>(`${API_URL}/videos`);
+    const response = await axios.get<{ data: Video[] }>(`${API_URL}/videos`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data.data || []; // Giả sử API trả về trong { data: [...] }
   } catch (error) {
     console.error("Error fetching videos:", error);
@@ -77,10 +79,19 @@ export const getVideos = async (): Promise<Video[]> => {
 /**
  * Fetch chi tiết video bằng ID
  */
-export const getVideoById = async (id: string): Promise<Video | null> => {
+export const getVideoById = async (
+  id: string,
+  token: string
+): Promise<Video | null> => {
   try {
-    // TODO: Xác thực - Nếu API video/{id} yêu cầu auth, cần lấy token và thêm vào header.
-    const response = await axios.get<{ data: Video }>(`${API_URL}/videos/${id}`);
+    const response = await axios.get<{ data: Video }>(
+      `${API_URL}/videos/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data.data || null;
   } catch (error) {
     console.error(`Error fetching video ${id}:`, error);
@@ -95,17 +106,22 @@ export const getVideoById = async (id: string): Promise<Video | null> => {
  */
 export const uploadVideoFile = async (
   formData: FormData,
+  token: string,
   onUploadProgress?: (progress: number) => void // Callback tiến trình cho client
-): Promise<{ success: boolean; message: string; videoId?: string }> => { // Trả về videoId nếu backend tạo ngay
+): Promise<{ success: boolean; message: string; videoId?: string }> => {
+  // Trả về videoId nếu backend tạo ngay
   try {
-    // TODO: Xác thực - Nếu API upload yêu cầu auth, cần nhận token từ caller 
-    // (ví dụ: Server Action) và thêm vào header.
-    const response = await axios.post<{ success: boolean; message: string; data?: { id: string } }>(
+    const response = await axios.post<{
+      success: boolean;
+      message: string;
+      data?: { id: string };
+    }>(
       `${API_URL}/videos/upload`, // Endpoint backend để upload
       formData,
       {
         headers: {
           "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
         },
         onUploadProgress: (progressEvent) => {
           if (onUploadProgress && progressEvent.total) {
@@ -117,14 +133,15 @@ export const uploadVideoFile = async (
         },
       }
     );
-    return { 
-        success: response.data.success,
-        message: response.data.message,
-        videoId: response.data.data?.id
+    return {
+      success: response.data.success,
+      message: response.data.message,
+      videoId: response.data.data?.id,
     };
   } catch (error) {
     console.error("Error uploading video:", error);
-    const message = error instanceof axios.AxiosError 
+    const message =
+      error instanceof axios.AxiosError
         ? error.response?.data?.message || error.message
         : "Failed to upload video";
     throw new Error(message);
@@ -134,11 +151,13 @@ export const uploadVideoFile = async (
 /**
  * Xóa video bằng ID
  */
-export const deleteVideo = async (id: string): Promise<void> => {
+export const deleteVideo = async (id: string, token: string): Promise<void> => {
   try {
-    // TODO: Xác thực - Nếu API delete yêu cầu auth, cần nhận token từ caller 
-    // (ví dụ: hook mutation hoặc Server Action) và thêm vào header.
-    await axios.delete(`${API_URL}/videos/${id}`);
+    await axios.delete(`${API_URL}/videos/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   } catch (error) {
     console.error(`Error deleting video ${id}:`, error);
     throw new Error("Failed to delete video");
@@ -153,38 +172,43 @@ export async function getVideoStreamUrls(
   // Thực tế API mới có 2 endpoint riêng cho original và processed
   // Tạm thời sẽ gọi cả 2 và kết hợp kết quả
   const originalUrlResponse = await fetch(
-    `${API_URL}/videos/${id}/presigned-url?expirationInMinutes=15`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!originalUrlResponse.ok) {
-    throw new Error('Không thể lấy URL stream video gốc');
-  }
-
-  const originalData: ApiResponse<string> = await originalUrlResponse.json();
-  
-  let processedUrl = null;
-  let processedSuccess = false;
-  
-  try {
-    const processedUrlResponse = await fetch(
-      `${API_URL}/videos/${id}/processed-url?expirationInMinutes=15`, {
+    `${API_URL}/videos/${id}/presigned-url?expirationInMinutes=15`,
+    {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    });
-    
+    }
+  );
+
+  if (!originalUrlResponse.ok) {
+    throw new Error("Không thể lấy URL stream video gốc");
+  }
+
+  const originalData: ApiResponse<string> = await originalUrlResponse.json();
+
+  let processedUrl = null;
+  let processedSuccess = false;
+
+  try {
+    const processedUrlResponse = await fetch(
+      `${API_URL}/videos/${id}/processed-url?expirationInMinutes=15`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     if (processedUrlResponse.ok) {
-      const processedData: ApiResponse<string> = await processedUrlResponse.json();
+      const processedData: ApiResponse<string> =
+        await processedUrlResponse.json();
       if (processedData.success) {
         processedUrl = processedData.data;
         processedSuccess = true;
       }
     }
   } catch (error) {
-    console.error('Error fetching processed URL:', error);
+    console.error("Error fetching processed URL:", error);
     // Không throw lỗi vì original URL đã lấy được
   }
 
@@ -196,11 +220,11 @@ export async function getVideoStreamUrls(
   });
 
   if (!videoResponse.ok) {
-    throw new Error('Không thể lấy thông tin video');
+    throw new Error("Không thể lấy thông tin video");
   }
 
   const videoData: ApiResponse<Video> = await videoResponse.json();
-  
+
   // Tạo đối tượng VideoStreamUrls từ dữ liệu
   return {
     original_url: originalData.data,
@@ -219,18 +243,38 @@ export async function getVideoDetections(
   token: string
 ): Promise<Detection[]> {
   // Trả về mảng rỗng vì API chưa cung cấp
-  console.log(`getVideoDetections called for video ${id}, but endpoint not implemented yet`);
+  console.log(
+    `getVideoDetections called for video ${id}, but endpoint not implemented yet`
+  );
   return [];
 }
 
 // Hàm tạo URL tải xuống video - API không cung cấp endpoint này trực tiếp
 // Nhưng chúng ta có thể sử dụng presigned-url
-export function getVideoDownloadUrl(
+export async function getVideoDownloadUrl(
   id: string,
+  token: string,
   processed: boolean = false
-): string {
-  // Trong thực tế, chúng ta sẽ gọi endpoint /videos/{id}/presigned-url hoặc /videos/{id}/processed-url
-  // và sau đó chuyển hướng đến URL đó
-  // Trong phiên bản giả này, chúng ta trả về một URL tạm thời
-  return `${API_URL}/videos/${id}/${processed ? 'processed-url' : 'presigned-url'}?expirationInMinutes=15`;
-} 
+): Promise<string> {
+  // Gọi đến API để lấy presigned URL
+  const endpoint = processed ? "processed-url" : "presigned-url";
+  const response = await fetch(
+    `${API_URL}/videos/${id}/${endpoint}?expirationInMinutes=15`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Không thể lấy URL tải xuống cho video ${id}`);
+  }
+
+  const data: ApiResponse<string> = await response.json();
+  if (!data.success) {
+    throw new Error(data.message || "Không thể lấy URL tải xuống");
+  }
+
+  return data.data;
+}

@@ -3,9 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthSession } from "@/lib/auth/useAuthSession";
+import { Link } from "@/lib/i18n/navigation";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 
 export default function HeroSection() {
@@ -92,7 +92,7 @@ export default function HeroSection() {
               </>
             ) : (
               <>
-                <Link href={`/${locale}/upload`}>
+                <Link href="/upload">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -107,7 +107,7 @@ export default function HeroSection() {
                   </motion.div>
                 </Link>
                 {isAdmin && (
-                  <Link href={`/${locale}/dashboard`}>
+                  <Link href="/dashboard">
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -123,7 +123,7 @@ export default function HeroSection() {
                   </Link>
                 )}
                 {!isAuthenticated && (
-                  <Link href={`/${locale}/auth/login`}>
+                  <Link href="/auth/login">
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}

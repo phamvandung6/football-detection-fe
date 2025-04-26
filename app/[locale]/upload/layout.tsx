@@ -1,11 +1,11 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/common/ProtectedRoute";
+import { ReactNode } from "react";
 
-export default function UploadLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+interface UploadLayoutProps {
+  children: ReactNode;
+}
+
+export default function UploadLayout({ children }: UploadLayoutProps) {
+  return <>{children}</>;
 }
