@@ -143,7 +143,7 @@ export function VideoUploadForm({ locale }: VideoUploadFormProps) {
           <Button type="submit" disabled={isUploading || !selectedFile}>
             {isUploading
               ? t("video.upload.uploading")
-              : t("video.upload.uploadButton")}
+              : t("video.upload.upload")}
           </Button>
         </form>
       </CardContent>

@@ -117,7 +117,7 @@ export function VideoList({ locale }: VideoListProps) {
               {t("video.delete.confirmTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("video.delete.confirmMessage", {
+              {t("video.delete.confirmDescription", {
                 title: videoToDelete?.title || "",
               })}
             </AlertDialogDescription>
