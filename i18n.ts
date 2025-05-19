@@ -2,30 +2,24 @@ import { getRequestConfig } from "next-intl/server";
 import { defaultLocale, locales } from "./lib/i18n/locales";
 
 export default getRequestConfig(async ({ locale }) => {
-  let finalLocale = locale;
+  let finalLocale = locale || defaultLocale;
 
   // Xác thực locale và xử lý fallback
-  if (!finalLocale || !locales.includes(finalLocale as any)) {
-    console.error(
-      `[i18n.ts] Invalid or missing locale received: ${finalLocale}. Falling back to default: ${defaultLocale}`
+  if (!locales.includes(finalLocale as any)) {
+    console.warn(
+      `[i18n.ts] Invalid locale received: ${finalLocale}. Falling back to default: ${defaultLocale}`
     );
     finalLocale = defaultLocale; // Use default locale instead
   }
-
-  console.log(
-    `[i18n.ts] Attempting to load messages for locale: ${finalLocale}`
-  );
 
   let finalMessages: any;
   try {
     // Tải tệp message tương ứng với finalLocale
     finalMessages = (await import(`./lib/i18n/messages/${finalLocale}.json`))
       .default;
-    console.log(`[i18n.ts] Successfully loaded messages for: ${finalLocale}`);
   } catch (error) {
     console.error(
-      `[i18n.ts] Failed to load messages for locale ${finalLocale}. Trying default locale messages as fallback: `,
-      error
+      `[i18n.ts] Failed to load messages for locale ${finalLocale}. Trying default locale messages as fallback.`
     );
     // Nếu không tải được messages cho locale hợp lệ (hoặc locale default), thử lại với default một lần nữa
     // hoặc trả về messages rỗng để tránh lỗi hoàn toàn.
@@ -38,8 +32,7 @@ export default getRequestConfig(async ({ locale }) => {
       );
     } catch (fallbackError) {
       console.error(
-        `[i18n.ts] CRITICAL: Failed to load even default messages (${defaultLocale}). Returning empty messages.`,
-        fallbackError
+        `[i18n.ts] CRITICAL: Failed to load even default messages (${defaultLocale}). Returning empty messages.`
       );
       finalMessages = {};
     }

@@ -54,6 +54,46 @@ export interface Detection {
   frameNumber: number;
 }
 
+// Interface cho trạng thái xử lý video
+export interface VideoProcessingStatus {
+  progress: number;
+  videoId: string;
+  message: string;
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+  updatedAt?: string;
+}
+
+// Interface cho URL stream video
+export interface VideoStreamInfo {
+  url: string;
+  expiresAt: string;
+  title: string;
+  videoType: string;
+}
+
+// Cập nhật VideoUploadResponseData để khớp với response đầy đủ từ backend
+// Đây là cấu trúc của object được trả về trực tiếp bởi API upload (không có wrapper ApiResponse)
+interface VideoUploadResponse {
+    id: string;
+    userId: string;
+    username: string;
+    title: string;
+    description: string;
+    videoType: "UPLOADED" | "YOUTUBE"; 
+    filePath: string;
+    fileSize: number;
+    duration: number | null;
+    thumbnailPath: string | null;
+    processedPath: string | null;
+    youtubeUrl: string | null;
+    youtubeVideoId: string | null;
+    isDownloadable: boolean;
+    status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'; 
+    progress: number;
+    createdAt: string | null; 
+    updatedAt: string | null; 
+}
+
 /**
  * Fetch danh sách videos
  */
@@ -115,11 +155,9 @@ export const uploadVideoFile = async (
   onUploadProgress?: (progress: number) => void
 ): Promise<{ success: boolean; message: string; videoId?: string }> => {
   try {
-    const { data } = await apiClient.post<{
-      success: boolean;
-      message: string;
-      id?: string;
-    }>("/videos/upload", formData, {
+    // Giả định apiClient.post trả về một object response (ví dụ: AxiosResponse)
+    // và dữ liệu thực tế từ API nằm trong response.data
+    const response = await apiClient.post<VideoUploadResponse>("/videos", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -132,20 +170,35 @@ export const uploadVideoFile = async (
         }
       },
     });
+    
+    // Dữ liệu thực tế từ server nằm trong response.data
+    const responseData = response.data; 
 
-    return {
-      success: data.success || false,
-      message: data.message || "Upload successful",
-      videoId: data.id,
-    };
+    console.log("[videoService] Upload API response (actual data object from response.data):", responseData);
+
+    if (responseData && responseData.id) {
+      return {
+        success: true, 
+        message: "Video uploaded successfully", // Hoặc responseData.message nếu API upload có trả về
+        videoId: responseData.id,
+      };
+    } else {
+      console.error("[videoService] Upload response missing video ID or invalid structure:", responseData);
+      return {
+        success: false,
+        message: "Upload failed: No video ID in response or invalid structure",
+        videoId: undefined,
+      };
+    }
+
   } catch (error: any) {
-    console.error("[Video Service] Error uploading video:", error);
+    console.error("[videoService] Error uploading video:", error);
+    const apiErrorMessage = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === 'string' ? error.response.data : undefined);
+    const finalMessage = apiErrorMessage || error.message || "Failed to upload video";
     return {
-      success: false,
-      message:
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to upload video",
+      success: false, 
+      message: finalMessage,
+      videoId: undefined
     };
   }
 };
@@ -160,6 +213,91 @@ export const deleteVideo = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error(`[Video Service] Error deleting video ${id}:`, error);
     return false;
+  }
+};
+
+/**
+ * Lấy trạng thái xử lý video
+ */
+export const getVideoProcessingStatus = async (videoIdInput: string): Promise<VideoProcessingStatus | null> => {
+  try {
+    // API trả về cấu trúc ApiResponse<VideoProcessingStatusContent>
+    // Trong đó VideoProcessingStatusContent có thể thiếu videoId hoặc có status là "COMPLETED"
+    interface VideoProcessingStatusContentFromApi {
+        progress: number;
+        status: string; // Nhận string từ API (có thể là "COMPLETED")
+        message: string;
+        videoId?: string; // API có thể không trả về videoId trong một số trường hợp (vd: COMPLETED)
+        updatedAt?: string; // API có thể không trả về updatedAt
+    }
+
+    const response = await apiClient.get<ApiResponse<VideoProcessingStatusContentFromApi>>(`/videos/${videoIdInput}/processing-status`);
+    const apiResponse = response.data; // Đây là object { success, message, data: statusContent, timestamp }
+
+    console.log(`[Video Service] Raw ApiResponse for getVideoProcessingStatus for ${videoIdInput}:`, apiResponse);
+
+    if (apiResponse && apiResponse.success && apiResponse.data) {
+      const statusContent = apiResponse.data;
+      
+      // Tạo object VideoProcessingStatus hoàn chỉnh
+      const processedStatus: VideoProcessingStatus = {
+        progress: statusContent.progress,
+        message: statusContent.message,
+        // Map "COMPLETED" từ backend thành "READY" cho frontend
+        // và đảm bảo status là một trong các giá trị của union type
+        status: statusContent.status === 'COMPLETED' ? 'READY' : 
+                (statusContent.status === 'PENDING' || statusContent.status === 'PROCESSING' || statusContent.status === 'FAILED' || statusContent.status === 'READY') 
+                ? statusContent.status as VideoProcessingStatus['status'] 
+                : 'FAILED', // Fallback nếu status từ API không hợp lệ
+        videoId: statusContent.videoId || videoIdInput, // Ưu tiên videoId từ API, nếu không có thì dùng videoIdInput
+        updatedAt: statusContent.updatedAt || apiResponse.timestamp, // Ưu tiên updatedAt từ API, nếu không có thì dùng timestamp của response
+      };
+
+      console.log(`[Video Service] Processed status data for ${videoIdInput}:`, processedStatus);
+      
+      // Kiểm tra lại các trường bắt buộc sau khi xử lý
+      if (processedStatus.videoId && processedStatus.status) {
+          return processedStatus;
+      } else {
+          console.warn(`[Video Service] getVideoProcessingStatus for ${videoIdInput} - processedStatus is missing required fields:`, processedStatus);
+          return null;
+      }
+    } else {
+      console.warn(`[Video Service] getVideoProcessingStatus for ${videoIdInput} - API call not successful or no data field:`, apiResponse);
+      return null;
+    }
+  } catch (error: any) {
+    console.error(`[Video Service] Error fetching processing status for video ${videoIdInput}:`, error);
+    if (error.response) {
+      console.error(`[Video Service] API Error details for ${videoIdInput} (processing status):`, error.response.data);
+    }
+    return null;
+  }
+};
+
+/**
+ * Lấy URL stream video
+ */
+export const getVideoStreamUrl = async (id: string): Promise<VideoStreamInfo | null> => {
+  try {
+    const response = await apiClient.get<VideoStreamInfo>(`/videos/${id}/stream`);
+    return response.data;
+  } catch (error) {
+    console.error(`[Video Service] Error fetching stream URL for video ${id}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Refresh URL stream video khi hết hạn
+ */
+export const refreshVideoStreamUrl = async (id: string): Promise<{ url: string, expiresAt: string } | null> => {
+  try {
+    const { data } = await apiClient.get<{ url: string, expiresAt: string }>(`/videos/${id}/stream/refresh`);
+    return data;
+  } catch (error) {
+    console.error(`[Video Service] Error refreshing stream URL for video ${id}:`, error);
+    return null;
   }
 };
 

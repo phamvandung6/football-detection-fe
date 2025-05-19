@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { uploadVideo } from "@/app/[locale]/actions";
+import { uploadVideoFile } from "@/lib/api/videoService";
 
 type UploadCardProps = {
   variants?: any;
@@ -46,7 +46,7 @@ export default function UploadCard({ variants }: UploadCardProps) {
       formData.append("file", selectedFile);
 
       // Call server action
-      const result = await uploadVideo(formData);
+      const result = await uploadVideoFile(formData);
 
       if (result.success) {
         toast.success(result.message);

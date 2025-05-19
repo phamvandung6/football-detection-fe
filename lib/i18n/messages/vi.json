@@ -5,6 +5,7 @@
     "beta": "Thử nghiệm"
   },
   "common": {
+    "actions": "Hành động",
     "loading": "Đang tải...",
     "error": "Lỗi",
     "success": "Thành công",
@@ -55,7 +56,14 @@
     "daysAgo": "ngày trước",
     "backToHome": "Quay lại trang chủ",
     "backToVideos": "Quay lại danh sách video",
-    "orContinueWith": "Hoặc tiếp tục với"
+    "orContinueWith": "Hoặc tiếp tục với",
+    "completed": "đã hoàn thành",
+    "dismiss": "Bỏ qua",
+    "hide": "Ẩn",
+    "viewVideo": "Xem video",
+    "minimize": "Thu nhỏ",
+    "unknownDate": "Không rõ ngày",
+    "deleting": "Đang xóa..."
   },
   "auth": {
     "login": "Đăng nhập",
@@ -166,11 +174,11 @@
     "description": "Xem tất cả video đã tải lên và đã xử lý của bạn"
   },
   "upload": {
-    "title": "Tải lên video",
+    "title": "Tải lên video của bạn",
     "subtitle": "Tải lên video mới để xử lý",
     "description": "Tải lên video bóng đá của bạn để phân tích và nhận diện bằng AI",
     "myVideos": "Video của tôi",
-    "newVideo": "Tải lên video mới"
+    "newVideo": "Video mới"
   },
   "video": {
     "play": "Phát",
@@ -198,7 +206,8 @@
       "uploadSuccess": "Tải lên video thành công",
       "uploadError": "Không thể tải lên video",
       "submit": "Tải lên video",
-      "changeFile": "Thay đổi tệp"
+      "changeFile": "Thay đổi tệp",
+      "progress": "Tiến trình tải lên"
     },
     "processing": {
       "title": "Đang xử lý video",
@@ -237,6 +246,7 @@
   "videoDetails": {
     "title": "Tiêu đề",
     "description": "Mô tả",
+    "uploadDate": "Ngày tải lên",
     "views": "lượt xem",
     "followers": "người theo dõi",
     "follow": "Theo dõi",
@@ -373,7 +383,7 @@
     "edit": "Chỉnh sửa",
     "follow": "Theo dõi",
     "followShort": "Theo dõi",
-    "noVideos": "Chưa có video",
+    "noVideos": "Bạn chưa có video nào.",
     "noVideosDescription": "Người dùng này chưa tải lên video nào",
     "noLikedVideos": "Không có video đã thích",
     "noLikedVideosDescription": "Người dùng này chưa thích video nào",
@@ -441,9 +451,21 @@
     "copyright": "© 2024 Phân tích Video Bóng đá. Đã đăng ký bản quyền."
   },
   "videoStatus": {
-    "pending": "Đang chờ",
+    "title": "Trạng thái xử lý",
     "processing": "Đang xử lý",
+    "processingWithProgress": "Đang xử lý ({progress}%)",
     "completed": "Hoàn thành",
-    "failed": "Thất bại"
+    "failed": "Thất bại",
+    "pending": "Đang chờ",
+    "showProcessing": "Hiện {count, plural, =1 {# video} other {# video}} đang xử lý",
+    "processingMessage": "Video đang được xử lý, vui lòng đợi.",
+    "pendingMessage": "Video của bạn đang chờ để được xử lý.",
+    "completedMessage": "Video của bạn đã được xử lý thành công và sẵn sàng để xem.",
+    "failedMessage": "Xử lý video thất bại. Vui lòng thử lại.",
+    "processingDetailed": "Đang xử lý: {progress}%",
+    "readyMessage": "Video đã sẵn sàng để xem!"
+  },
+  "notifications": {
+    "dismissAll": "Bỏ qua tất cả"
   }
 }

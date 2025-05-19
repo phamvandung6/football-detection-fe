@@ -5,6 +5,7 @@
     "beta": "Beta"
   },
   "common": {
+    "actions": "Actions",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
@@ -55,7 +56,13 @@
     "daysAgo": "days ago",
     "backToHome": "Back to Home",
     "backToVideos": "Back to Videos",
-    "orContinueWith": "Or continue with"
+    "orContinueWith": "Or continue with",
+    "completed": "Completed",
+    "dismiss": "Dismiss",
+    "hide": "Hide",
+    "viewVideo": "View Video",
+    "minimize": "Minimize",
+    "unknownDate": "Unknown date"
   },
   "auth": {
     "login": "Login",
@@ -196,7 +203,9 @@
       "noFileSelected": "Please select a video file",
       "titleRequired": "Title is required",
       "uploadSuccess": "Video uploaded successfully",
-      "uploadError": "Failed to upload video"
+      "uploadError": "Failed to upload video",
+      "processingStarted": "Video processing has started...",
+      "progress": "Upload Progress"
     },
     "processing": {
       "title": "Processing Video",
@@ -235,6 +244,7 @@
   "videoDetails": {
     "title": "Title",
     "description": "Description",
+    "uploadDate": "Upload Date",
     "views": "views",
     "followers": "followers",
     "follow": "Follow",
@@ -429,9 +439,21 @@
     "copyright": "© 2024 Football Video Processor. All rights reserved."
   },
   "videoStatus": {
-    "pending": "Pending",
+    "title": "Processing Status",
     "processing": "Processing",
+    "processingWithProgress": "Processing ({progress}%)",
     "completed": "Completed",
-    "failed": "Failed"
+    "failed": "Failed",
+    "pending": "Pending Processing",
+    "showProcessing": "Show {count, plural, =1 {# video} other {# videos}} processing",
+    "processingMessage": "Your video is being processed, please wait.",
+    "pendingMessage": "Your video is pending processing.",
+    "completedMessage": "Your video has been successfully processed and is ready to view.",
+    "failedMessage": "Video processing failed. Please try again.",
+    "processingDetailed": "Processing: {progress}%",
+    "readyMessage": "Video is ready to watch!"
+  },
+  "notifications": {
+    "dismissAll": "Dismiss All"
   }
 }

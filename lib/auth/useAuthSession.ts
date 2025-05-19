@@ -39,8 +39,10 @@ export function useAuthSession() {
   >({
     queryKey: ["authSession"],
     queryFn: fetchSession,
-    staleTime: 5 * 60 * 1000, // 5 phút
+    staleTime: 0, // Giảm staleTime xuống 0 để luôn refetch khi cần
     refetchOnWindowFocus: true,
+    refetchOnMount: true, // Luôn refetch khi component mount
+    refetchInterval: false,
     retry: 1,
   });
 

@@ -1,23 +1,5 @@
 // types/video.ts
 
-// Định nghĩa cấu trúc cho bounding box trong detection
-export interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-// Định nghĩa cấu trúc cho kết quả phát hiện
-export interface Detection {
-  id: string; // Hoặc number tùy thuộc vào backend
-  objectType: string;
-  confidence: number;
-  timestamp: string; // Hoặc number/Date tùy thuộc vào backend
-  boundingBox: BoundingBox;
-  frameNumber: number;
-}
-
 // Định nghĩa cấu trúc cho URL stream
 export interface VideoStreamUrls {
   hls?: string;
@@ -34,30 +16,38 @@ export interface VideoMetadata {
 }
 
 // Định nghĩa trạng thái video
-export type VideoStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED";
+export type VideoStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "READY"
+  | "COMPLETED"
+  | "FAILED";
+
+// Định nghĩa loại video
+export type VideoType = "UPLOADED" | "YOUTUBE";
 
 // Định nghĩa cấu trúc chính cho Video
 export interface Video {
   id: string;
+  userId: string;
+  username: string;
   title: string;
   description: string;
+  videoType: VideoType;
+  filePath: string;
+  fileSize: number;
+  duration: number;
+  thumbnailPath: string;
+  processedPath: string | null;
+  youtubeUrl: string | null;
+  youtubeVideoId: string | null;
+  isDownloadable: boolean;
   status: VideoStatus;
-  createdAt: string; // ISO 8601 string
-  updatedAt: string; // ISO 8601 string
+  progress: number;
+  createdAt: string;
+  updatedAt: string;
 
-  // Các trường tùy chọn từ quá trình xử lý/upload
-  userId?: string; // ID của người upload
-  original_filename?: string;
-  processed_filename?: string;
-  file_size?: number; // bytes
-  thumbnailUrl?: string;
-  originalVideoUrl?: string; // URL video gốc (nếu có)
-  processedVideoUrl?: string; // URL video đã xử lý (nếu có)
   streamUrls?: VideoStreamUrls;
   video_metadata?: VideoMetadata;
-  detections?: Detection[];
   error_message?: string;
-  processing_started_at?: string; // ISO 8601 string
-  processing_completed_at?: string; // ISO 8601 string
-  progress?: number; // Tiến trình xử lý (0-100)
 }

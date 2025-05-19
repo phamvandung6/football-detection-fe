@@ -6,7 +6,7 @@ import { formatBytes } from "@/lib/utils";
 import { Video } from "@/types/video";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, vi } from "date-fns/locale";
-import { Calendar, Clock, Download, FileVideo, Loader2 } from "lucide-react";
+import { Calendar, Clock, Download, FileVideo, Loader2, Tag, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 
@@ -59,19 +59,42 @@ export function VideoDetailsCard({
     return null;
   }
 
+  // Helper để format duration từ number (giây) sang MM:SS hoặc HH:MM:SS
+  const formatDuration = (totalSeconds: number) => {
+    if (isNaN(totalSeconds) || totalSeconds < 0) {
+      return t("common.unknownDuration");
+    }
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+
+    const paddedMinutes = String(minutes).padStart(2, "0");
+    const paddedSeconds = String(seconds).padStart(2, "0");
+
+    if (hours > 0) {
+      return `${String(hours).padStart(2, "0")}:${paddedMinutes}:${paddedSeconds}`;
+    }
+    return `${paddedMinutes}:${paddedSeconds}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Card thông tin chi tiết */}
       <Card>
         <CardContent className="pt-6 space-y-4">
           <h2 className="text-lg font-semibold border-b pb-2 mb-4">
-            {t("videoDetails.details")}
+            {t("videoDetails.detailsTitle")}
           </h2>
 
           <div className="text-sm space-y-3">
             <DetailItem
               label={t("videoDetails.description")}
               value={video.description || t("videoDetails.noDescription")}
+            />
+            <DetailItem
+              label={t("videoDetails.uploader")}
+              icon={User}
+              value={video.username || t("common.unknownUser")}
             />
             <DetailItem
               label={t("videoDetails.uploadDate")}
@@ -85,47 +108,37 @@ export function VideoDetailsCard({
                   : t("common.unknownDate")
               }
             />
-            {video.video_metadata?.duration && (
+            {video.duration !== undefined && video.duration > 0 && (
               <DetailItem
                 label={t("videoDetails.duration")}
                 icon={Clock}
-                value={video.video_metadata.duration}
+                value={formatDuration(video.duration)}
               />
             )}
-            {video.original_filename && (
-              <DetailItem
-                label={t("videoDetails.originalFilename")}
-                icon={FileVideo}
-                value={video.original_filename}
-                truncate
-              />
-            )}
-            {video.file_size !== undefined && (
+            {video.fileSize !== undefined && (
               <DetailItem
                 label={t("videoDetails.fileSize")}
-                value={formatBytes(video.file_size)}
+                icon={FileVideo}
+                value={formatBytes(video.fileSize)}
               />
             )}
-            {video.video_metadata?.width && video.video_metadata?.height && (
-              <DetailItem
-                label={t("videoDetails.resolution")}
-                value={`${video.video_metadata.width} x ${video.video_metadata.height}`}
-              />
-            )}
-            {/* Thêm các chi tiết khác nếu cần */}
+            <DetailItem
+                label={t("videoDetails.videoType")}
+                icon={Tag}
+                value={video.videoType || t("common.unknown")}
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Card Download */}
-      {(video.status === "READY" || video.originalVideoUrl) && (
+      {video.isDownloadable && (video.status === "READY" || video.status === "COMPLETED") && (
         <Card>
           <CardContent className="pt-6 space-y-3">
             <h3 className="text-md font-semibold border-b pb-2 mb-4">
               {t("video.download.title")}
             </h3>
-            {/* Original Video Download Button */}
-            {(video.originalVideoUrl || video.status === "READY") && (
+            {video.videoType === "UPLOADED" && video.filePath && (
               <Button
                 variant="outline"
                 className="w-full justify-center"
@@ -140,8 +153,7 @@ export function VideoDetailsCard({
                 {t("video.download.original")}
               </Button>
             )}
-            {/* Processed Video Download Button */}
-            {video.status === "READY" && (
+            {video.videoType === "UPLOADED" && video.processedPath && (
               <Button
                 variant="default"
                 className="w-full justify-center"
@@ -155,6 +167,11 @@ export function VideoDetailsCard({
                 )}
                 {t("video.download.processed")}
               </Button>
+            )}
+            {video.videoType === "YOUTUBE" && (
+              <p className="text-sm text-muted-foreground text-center">
+                {t("video.download.youtubeNotDownloadable")}
+              </p>
             )}
           </CardContent>
         </Card>

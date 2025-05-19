@@ -81,6 +81,7 @@ export function VideoActions({
 
       <ShareDialog
         videoId={videoId}
+        locale={locale}
         trigger={
           <Button
             variant="outline"

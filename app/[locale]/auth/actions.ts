@@ -44,6 +44,7 @@ interface ActionResult {
   success: boolean;
   message?: string;
   errors?: Record<string, string[] | undefined>;
+  shouldInvalidateQueries?: boolean;
 }
 
 // --- Server Actions --- //
@@ -107,8 +108,14 @@ export async function loginAction(
     // Revalidate và redirect
     revalidatePath("/", "layout");
 
-    // Không bao gồm redirect trong try-catch để tránh bắt lỗi NEXT_REDIRECT
-    console.log(`[loginAction] Redirecting to /${locale}/upload`);
+    // Tạo response với header đặc biệt để client-side có thể phát hiện và invalidate query
+    const authResult = {
+      success: true,
+      message: "Authentication successful",
+      shouldInvalidateQueries: true,
+    };
+    
+    return authResult;
   } catch (error) {
     console.error("[LOGIN_ACTION_ERROR]", error);
     await deleteAuthCookies();
@@ -117,9 +124,6 @@ export async function loginAction(
       message: error instanceof Error ? error.message : t("loginError"),
     };
   }
-
-  // Đặt redirect bên ngoài khối try-catch để nó có thể hoạt động đúng cách
-  redirect(`/${locale}/upload`);
 }
 
 export async function registerAction(
@@ -176,8 +180,15 @@ export async function registerAction(
 
     // Revalidate và redirect
     revalidatePath("/", "layout");
-    // Ghi log về việc redirect
-    console.log(`[registerAction] Redirecting to /${locale}/dashboard`);
+    
+    // Tạo response với header đặc biệt để client-side có thể phát hiện và invalidate query
+    const authResult = {
+      success: true,
+      message: "Registration successful",
+      shouldInvalidateQueries: true,
+    };
+    
+    return authResult;
   } catch (error) {
     console.error("[REGISTER_ACTION_ERROR]", error);
     await deleteAuthCookies();
@@ -186,9 +197,6 @@ export async function registerAction(
       message: error instanceof Error ? error.message : t("registerError"),
     };
   }
-
-  // Đặt redirect bên ngoài khối try-catch để nó có thể hoạt động đúng cách
-  redirect(`/${locale}/dashboard`);
 }
 
 export async function logoutAction(locale: string = "en") {

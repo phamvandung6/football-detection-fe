@@ -85,6 +85,7 @@ function sanitizeCallbackUrl(callbackUrl: string | null): string | null {
           pathWithoutLocale.startsWith(route + "/")
       )
     ) {
+      // Lỗi nghiêm trọng vẫn nên log
       console.warn(
         "[Sanitize Callback] Removing callbackUrl pointing to auth route:",
         decodedUrl
@@ -93,6 +94,7 @@ function sanitizeCallbackUrl(callbackUrl: string | null): string | null {
     }
     return decodedUrl;
   } catch (error) {
+    // Lỗi nghiêm trọng vẫn nên log
     console.error(
       "[Sanitize Callback Error]:",
       error,
@@ -109,7 +111,7 @@ function sanitizeCallbackUrl(callbackUrl: string | null): string | null {
 const i18nConfig = {
   locales,
   defaultLocale,
-  localePrefix: "as-needed" as const,
+  localePrefix: "always" as const,
 };
 
 // Tạo middleware i18n
@@ -117,32 +119,23 @@ const handleI18nRouting = createMiddleware(i18nConfig);
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log(`[middleware] Request path: ${pathname}`);
 
   // Khởi tạo i18n middleware
   const response = handleI18nRouting(request);
   const effectiveLocale =
     response.headers.get("x-middleware-request-nextintl-locale") ||
     defaultLocale;
-  console.log(`[middleware] Effective locale: ${effectiveLocale}`);
 
   // Set X-NEXT-INTL-LOCALE header cho server actions
-  response.headers.set("X-NEXT-INTL-LOCALE", effectiveLocale);
-  console.log(
-    `[middleware] Set X-NEXT-INTL-LOCALE header: ${response.headers.get(
-      "X-NEXT-INTL-LOCALE"
-    )}`
-  );
+  // Đảm bảo luôn có giá trị hợp lệ bằng cách kiểm tra nếu locale không nằm trong danh sách
+  const validLocale = locales.includes(effectiveLocale as any) 
+    ? effectiveLocale 
+    : defaultLocale;
+  response.headers.set("X-NEXT-INTL-LOCALE", validLocale);
 
   // Kiểm tra xác thực bằng cách đọc trực tiếp từ cookie
   const authToken = request.cookies.get("auth_token")?.value;
   const isAuthenticated = !!authToken;
-  console.log(
-    `[middleware] Authentication status: ${
-      isAuthenticated ? "Authenticated" : "Not authenticated"
-    }`
-  );
-  console.log(`[middleware] Auth token exists: ${!!authToken}`);
 
   // Xây dựng URL mới nếu cần redirect (để giữ locale)
   const newUrl = request.nextUrl.clone();
@@ -153,7 +146,6 @@ export default async function middleware(request: NextRequest) {
       pathname.startsWith(`/${effectiveLocale}${route}`) ||
       pathname.startsWith(route)
   );
-  console.log(`[middleware] Is protected route: ${isProtectedRoute}`);
 
   // 2. Kiểm tra các route chỉ dành cho người dùng chưa đăng nhập
   const isPublicOnlyRoute = authRoutes.some(
@@ -161,23 +153,16 @@ export default async function middleware(request: NextRequest) {
       pathname.startsWith(`/${effectiveLocale}${route}`) ||
       pathname.startsWith(route)
   );
-  console.log(`[middleware] Is public-only route: ${isPublicOnlyRoute}`);
 
   // Người dùng chưa đăng nhập nhưng đang cố truy cập route được bảo vệ
   if (isProtectedRoute && !isAuthenticated) {
-    console.log(
-      `[middleware] Redirecting unauthenticated user from protected route to login`
-    );
-    newUrl.pathname = `/${effectiveLocale}/auth/login`;
+    newUrl.pathname = `/${validLocale}/auth/login`;
     return NextResponse.redirect(newUrl);
   }
 
   // Người dùng đã đăng nhập nhưng đang cố truy cập các route chỉ dành cho người chưa đăng nhập
   if (isPublicOnlyRoute && isAuthenticated) {
-    console.log(
-      `[middleware] Redirecting authenticated user from public-only route to home`
-    );
-    newUrl.pathname = `/${effectiveLocale}`;
+    newUrl.pathname = `/${validLocale}`;
     return NextResponse.redirect(newUrl);
   }
 

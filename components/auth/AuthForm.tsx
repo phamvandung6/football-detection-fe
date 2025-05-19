@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Link } from "@/lib/i18n/navigation";
+import { Link, useRouter } from "@/lib/i18n/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
@@ -29,6 +30,8 @@ function SubmitButton({ label }: { label: string }) {
 export function AuthForm({ type, locale }: AuthFormProps) {
   const t = useTranslations();
   const isLogin = type === "login";
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const action = isLogin ? loginAction : registerAction;
 
@@ -38,7 +41,20 @@ export function AuthForm({ type, locale }: AuthFormProps) {
     if (formState?.success === false && formState.message) {
       toast.error(formState.message);
     }
-  }, [formState]);
+
+    if (formState?.success === true) {
+      // Nếu đăng nhập hoặc đăng ký thành công, invalidate cache của authSession
+      if (formState.shouldInvalidateQueries) {
+        queryClient.invalidateQueries({ queryKey: ["authSession"] });
+        
+        // Redirect sau khi invalidate thành công
+        const redirectPath = isLogin ? `/${locale}/upload` : `/${locale}/dashboard`;
+        setTimeout(() => {
+          router.push(redirectPath);
+        }, 100);
+      }
+    }
+  }, [formState, queryClient, locale, isLogin, router]);
 
   const nameError = formState?.errors?.name?.[0];
   const emailError = formState?.errors?.email?.[0];

@@ -1,9 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
-import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "@/components/layout/Navbar";
 import { Toaster } from "@/components/ui/sonner";
+import { ProcessingNotifications } from "@/components/videos/ProcessingNotifications";
+import { ReactNode } from "react";
 
 interface SiteLayoutProps {
   children: ReactNode;
@@ -17,6 +18,7 @@ export function SiteLayout({ children, locale }: SiteLayoutProps) {
       <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
       <Footer locale={locale} />
       <Toaster position="top-right" richColors />
+      <ProcessingNotifications locale={locale} />
     </div>
   );
 }

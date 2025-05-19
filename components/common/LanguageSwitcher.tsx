@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Locale, localeNames, locales } from "@/lib/i18n/locales";
-import { useRouter } from "@/lib/i18n/navigation";
 import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 
 interface LanguageSwitcherProps {
   locale: string;
@@ -19,13 +19,26 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ locale, pathname }: LanguageSwitcherProps) {
   const t = useTranslations();
-  const router = useRouter();
+  const currentPathname = usePathname();
 
   const handleLocaleChange = (newLocale: Locale) => {
-    // Sử dụng API của next-intl để chuyển đổi locale
-    // pathname được truyền vào đã bao gồm phần đường dẫn sau locale
-    // Ví dụ: với URL /vi/dashboard, pathname sẽ là /dashboard
-    router.replace(pathname, { locale: newLocale });
+    // Sử dụng hard redirect để đảm bảo việc chuyển đổi ngôn ngữ
+    // Lấy đường dẫn hiện tại (không bao gồm locale)
+    let pathWithoutLocale = pathname;
+    
+    // Nếu đường dẫn hiện tại bắt đầu với locale, bỏ phần locale
+    if (currentPathname) {
+      // Bỏ locale hiện tại nếu có
+      locales.forEach(l => {
+        if (currentPathname.startsWith(`/${l}`)) {
+          pathWithoutLocale = currentPathname.substring(l.length + 1) || "/";
+        }
+      });
+    }
+
+    // Tạo URL mới với locale mới
+    const newPath = `/${newLocale}${pathWithoutLocale === '/' ? '' : pathWithoutLocale}`;
+    window.location.href = newPath;
   };
 
   return (

@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  deleteVideo,
-  getVideoById,
-  getVideos,
-  uploadVideoFile,
+    deleteVideo,
+    getVideoById,
+    getVideos,
+    uploadVideoFile,
 } from "@/lib/api/videoService";
 import { Video } from "@/types/video";
 import {
-  InvalidateQueryFilters,
-  useMutation,
-  useQuery,
-  useQueryClient,
+    InvalidateQueryFilters,
+    useMutation,
+    useQuery,
+    useQueryClient,
 } from "@tanstack/react-query";
 
 // --- Hook để lấy danh sách video --- //
@@ -58,9 +58,10 @@ export const useUploadVideo = ({
   >({
     mutationFn: (formData: FormData) =>
       uploadVideoFile(formData, onUploadProgress),
-    onSuccess: (data) => {
+    onSuccess: (data, variables, context) => {
       // Invalidate cache của danh sách video để cập nhật UI
       queryClient.invalidateQueries(["videos"] as InvalidateQueryFilters);
+      console.log("Upload video success:", data);
       if (onSuccess) onSuccess(data);
     },
     onError: (error) => {

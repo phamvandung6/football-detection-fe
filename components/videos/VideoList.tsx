@@ -1,17 +1,18 @@
 "use client";
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useVideoProcessingManager } from "@/lib/hooks/useVideoProcessingManager";
 import { useDeleteVideo, useVideos } from "@/lib/hooks/useVideoQueries";
 import { Video } from "@/types/video";
 import { useTranslations } from "next-intl";
@@ -25,11 +26,17 @@ interface VideoListProps {
 
 export function VideoList({ locale }: VideoListProps) {
   const t = useTranslations();
+  const { data: videos, isLoading, error: fetchError, refetch: refetchVideos } = useVideos();
+  const { getCombinedVideoData, processingStatuses } = useVideoProcessingManager();
 
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { data: videos, isLoading, error: fetchError } = useVideos();
+  useEffect(() => {
+    const justCompletedVideo = Object.values(processingStatuses).find(status => status.status === 'READY');
+    if (justCompletedVideo) {
+    }
+  }, [processingStatuses, refetchVideos]);
 
   const deleteMutation = useDeleteVideo({
     onSuccess: () => {
@@ -67,7 +74,7 @@ export function VideoList({ locale }: VideoListProps) {
     }
   }, [fetchError, t]);
 
-  if (isLoading) {
+  if (isLoading && !videos) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, index) => (
@@ -99,15 +106,19 @@ export function VideoList({ locale }: VideoListProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {videos.map((video) => (
-          <VideoCard
-            key={video.id}
-            video={video}
-            locale={locale}
-            onDeleteClick={handleDeleteClick}
-            isDeleting={isDeleting && videoToDelete?.id === video.id}
-          />
-        ))}
+        {videos.map((video) => {
+          const processingStatusData = getCombinedVideoData(video);
+          return (
+            <VideoCard
+              key={video.id}
+              video={video}
+              locale={locale}
+              onDeleteClick={handleDeleteClick}
+              isDeleting={isDeleting && videoToDelete?.id === video.id}
+              processingStatusData={processingStatusData}
+            />
+          );
+        })}
       </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

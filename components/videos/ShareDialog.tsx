@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,19 +6,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { defaultLocale } from "@/lib/i18n/locales";
+import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface ShareDialogProps {
   videoId: string;
   trigger: React.ReactNode;
+  locale?: string;
 }
 
-export function ShareDialog({ videoId, trigger }: ShareDialogProps) {
+export function ShareDialog({ videoId, trigger, locale }: ShareDialogProps) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const shareUrl = `${window.location.origin}/videos/${videoId}`;
+  const params = useParams();
+  
+  // Lấy locale từ props, params hoặc dùng defaultLocale
+  const currentLocale = locale || (params.locale as string) || defaultLocale;
+  
+  // Luôn thêm locale vào URL chia sẻ, kể cả khi là locale mặc định
+  const origin = window.location.origin;
+  const shareUrl = `${origin}/${currentLocale}/videos/${videoId}`;
 
   const copyToClipboard = async () => {
     try {

@@ -50,7 +50,7 @@ export async function refreshTokenAction(
     const { accessToken, refreshToken: newRefreshToken } = data.data;
 
     // Cập nhật cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const secure = process.env.NODE_ENV === "production";
 
     cookieStore.set("auth_token", accessToken, {

@@ -1,4 +1,7 @@
-import { locales } from "@/lib/i18n/locales";
+import { ThemeProvider } from "@/components/common/ThemeProvider";
+import { ProcessingNotifications } from "@/components/videos/ProcessingNotifications";
+import { defaultLocale, locales } from "@/lib/i18n/locales";
+import { cn } from "@/lib/utils";
 import { ReactQueryProvider } from "@/providers/query-provider";
 import { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
@@ -32,14 +35,14 @@ export default async function LocaleLayout({
 }) {
   // Explicitly await the params object as required by Next.js
   const awaitedParams = await params;
-  const locale = awaitedParams.locale;
+  const locale = awaitedParams.locale || defaultLocale;
 
   // Debug log right after getting locale
   // console.log(`[LocaleLayout] Received locale after await: ${locale}`);
 
   // Validate locale
   if (!locales.includes(locale as any)) {
-    // console.error(`[LocaleLayout] Locale validation failed for: ${locale}`);
+    console.warn(`[LocaleLayout] Invalid locale: ${locale}, redirecting to 404`);
     notFound();
   }
 
@@ -56,23 +59,48 @@ export default async function LocaleLayout({
       `[LocaleLayout] Error calling getMessages for locale ${locale}:`,
       error
     );
-    // Nếu không lấy được messages (kể cả khi đã truyền locale đúng),
-    // có thể là lỗi nghiêm trọng hơn, nên gọi notFound()
-    notFound();
+    // Thử lấy messages cho locale mặc định nếu không thể lấy messages cho locale hiện tại
+    try {
+      messages = await getMessages({ locale: defaultLocale });
+      console.warn(
+        `[LocaleLayout] Falling back to default locale messages: ${defaultLocale}`
+      );
+    } catch (fallbackError) {
+      console.error(
+        `[LocaleLayout] Critical error: Failed to load even default messages:`,
+        fallbackError
+      );
+      // Nếu không lấy được messages cho locale mặc định (lỗi nghiêm trọng), trả về notFound
+      notFound();
+    }
   }
 
   return (
-    <NextIntlClientProvider
-      locale={locale}
-      messages={messages}
-      timeZone="Asia/Ho_Chi_Minh"
+    <div
+      className={cn(
+        "min-h-screen bg-background font-sans antialiased"
+      )}
     >
-      <ReactQueryProvider>
-        {/* <VideoProvider> */}
-        <SiteLayout locale={locale}>{children}</SiteLayout>
-        <Toaster position="top-right" richColors closeButton />
-        {/* </VideoProvider> */}
-      </ReactQueryProvider>
-    </NextIntlClientProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages}
+          timeZone="Asia/Ho_Chi_Minh"
+        >
+          <ReactQueryProvider>
+            {/* <VideoProvider> */}
+            <SiteLayout locale={locale}>{children}</SiteLayout>
+            <Toaster position="top-right" richColors closeButton />
+            {/* </VideoProvider> */}
+            <ProcessingNotifications locale={locale} />
+          </ReactQueryProvider>
+        </NextIntlClientProvider>
+      </ThemeProvider>
+    </div>
   );
 }
