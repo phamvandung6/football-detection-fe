@@ -48,6 +48,11 @@ export async function PATCH(
   return handleApiRequest(request, awaitedParams.path, "PATCH");
 }
 
+// Helper để log với timestamp
+const log = (message: string, ...data: any[]) => {
+  console.log(`[API Proxy ${new Date().toISOString()}]`, message, ...data);
+};
+
 /**
  * Xử lý request API và thêm token
  */
@@ -62,7 +67,17 @@ async function handleApiRequest(
     const queryString = request.nextUrl.search;
     const apiUrl = `${API_URL}/${path}${queryString}`;
 
-    console.log(`[API Proxy] Raw request to: ${apiUrl}, method: ${method}`);
+    // Kiểm tra nếu đây là endpoint processing-status hoặc download
+    const isProcessingStatusEndpoint = path.includes("processing-status");
+    const isDownloadEndpoint = path.includes("/download/");
+    
+    if (isProcessingStatusEndpoint) {
+      log(`Processing status request for path: ${path}`);
+    } else if (isDownloadEndpoint) {
+      log(`Download request for path: ${path}`);
+    } else {
+      log(`Raw request to: ${apiUrl}, method: ${method}`);
+    }
 
     // Lấy token từ cookies
     const cookieStore = await cookies();
@@ -71,7 +86,7 @@ async function handleApiRequest(
 
     // Nếu không có token và có refresh token, thử refresh
     if (!token && refreshToken) {
-      console.log("[API Proxy] No token found, attempting to refresh");
+      log("No token found, attempting to refresh");
       const refreshResult = await refreshTokenAction(refreshToken);
       if (refreshResult.success && refreshResult.newToken) {
         token = refreshResult.newToken;
@@ -83,7 +98,16 @@ async function handleApiRequest(
 
     // Đặt content-type dựa trên request gốc (đặc biệt quan trọng cho multipart)
     const originalContentType = request.headers.get("content-type") || "application/json";
-    console.log(`[API Proxy] Original Content-Type: ${originalContentType}`);
+    
+    if (isProcessingStatusEndpoint) {
+      log(`Processing status request content-type: ${originalContentType}`);
+      // Đảm bảo không sử dụng cache cho request status
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      headers.set('Pragma', 'no-cache');
+      headers.set('Expires', '0');
+    } else {
+      log(`Original Content-Type: ${originalContentType}`);
+    }
     
     // Không đặt Content-Type cho multipart/form-data request, để fetch API tự động xử lý boundary
     if (!originalContentType.includes("multipart/form-data")) {
@@ -111,22 +135,22 @@ async function handleApiRequest(
       // Xử lý đặc biệt cho multipart/form-data
       if (contentType.includes("multipart/form-data")) {
         body = await request.formData();
-        console.log("[API Proxy] Processing multipart/form-data request");
+        log("Processing multipart/form-data request");
         
         // Log FormData fields để debug
-        console.log("[API Proxy] FormData fields:");
+        log("FormData fields:");
         for (const pair of body.entries()) {
           const [key, value] = pair;
           if (value instanceof File) {
-            console.log(`- ${key}: File (name: ${value.name}, size: ${value.size}, type: ${value.type})`);
+            log(`- ${key}: File (name: ${value.name}, size: ${value.size}, type: ${value.type})`);
           } else {
-            console.log(`- ${key}: ${value}`);
+            log(`- ${key}: ${value}`);
           }
         }
 
         try {
           // Gửi request đến backend
-          console.log(`[API Proxy] ${method} ${apiUrl} (multipart)`);
+          log(`${method} ${apiUrl} (multipart)`);
           const response = await fetch(apiUrl, {
             method,
             headers,
@@ -134,15 +158,15 @@ async function handleApiRequest(
             redirect: "follow" as RequestRedirect,
           });
 
-          console.log(`[API Proxy] Response status: ${response.status}`);
+          log(`Response status: ${response.status}`);
           
           // Xử lý response
           let responseData;
           try {
             responseData = await response.json();
-            console.log(`[API Proxy] Response data:`, responseData);
+            log(`Response data:`, responseData);
           } catch (e) {
-            console.error("[API Proxy] Failed to parse response as JSON:", e);
+            console.error("Failed to parse response as JSON:", e);
             responseData = {};
           }
 
@@ -153,7 +177,7 @@ async function handleApiRequest(
             },
           });
         } catch (error) {
-          console.error("[API Proxy] Error sending multipart request:", error);
+          console.error("Error sending multipart request:", error);
           throw error;
         }
       } 
@@ -168,7 +192,12 @@ async function handleApiRequest(
     // Kiểm tra nếu không phải request multipart (đã xử lý ở trên)
     if (!(contentType.includes("multipart/form-data") && body)) {
       // Gửi request đến backend
-      console.log(`[API Proxy] ${method} ${apiUrl}`);
+      if (isProcessingStatusEndpoint) {
+        log(`Sending processing status request: ${method} ${apiUrl}`);
+      } else {
+        log(`${method} ${apiUrl}`);
+      }
+      
       const response = await fetch(apiUrl, {
         method,
         headers,
@@ -178,17 +207,110 @@ async function handleApiRequest(
             : JSON.stringify(body)
           : null,
         redirect: "follow" as RequestRedirect,
+        cache: isProcessingStatusEndpoint ? 'no-store' : undefined,
       });
+
+      // Đặc biệt log chi tiết cho endpoint processing-status
+      if (isProcessingStatusEndpoint) {
+        log(`Processing status response received: ${response.status}`);
+        
+        try {
+          const responseData = await response.json();
+          log(`Processing status response data:`, responseData);
+          
+          // Kiểm tra nếu response có định dạng đúng
+          if (responseData.data && typeof responseData.data.progress === 'number') {
+            log(`Validated processing progress: ${responseData.data.progress}%, status: ${responseData.data.status}`);
+          } else {
+            log(`Invalid processing status format:`, responseData);
+          }
+          
+          return NextResponse.json(responseData, {
+            status: response.status,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+            },
+          });
+        } catch (e) {
+          log(`Failed to parse processing status response as JSON:`, e);
+          return NextResponse.json(
+            { success: false, message: "Invalid response format from server" },
+            { status: 500 }
+          );
+        }
+      }
+      
+      // Xử lý đặc biệt cho endpoint download
+      if (isDownloadEndpoint) {
+        log(`Download response received: ${response.status}`);
+        
+        if (response.status === 200) {
+          try {
+            const responseData = await response.json();
+            log(`Download response data structure:`, 
+                typeof responseData === 'object' ? Object.keys(responseData) : typeof responseData);
+            
+            // Trường hợp 1: Response là ApiResponse<string> với URL trong trường data
+            if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+              log(`Found download URL in response.data:`, responseData.data);
+              return NextResponse.json(responseData, { 
+                status: 200,
+                headers: { "Content-Type": "application/json" }
+              });
+            }
+            
+            // Trường hợp 2: Response trực tiếp là URL dạng string
+            if (typeof responseData === 'string' && responseData.includes('http')) {
+              log(`Response is direct URL string:`, responseData);
+              return NextResponse.json({ success: true, data: responseData }, { 
+                status: 200,
+                headers: { "Content-Type": "application/json" }
+              });
+            }
+            
+            // Trả về response như nhận được
+            log(`Returning original response data`);
+            return NextResponse.json(responseData, {
+              status: response.status,
+              headers: { "Content-Type": "application/json" }
+            });
+          } catch (e) {
+            log(`Failed to parse download response as JSON, might be binary data:`, e);
+            
+            // Trả về lỗi
+            return NextResponse.json(
+              { 
+                success: false, 
+                message: "Download endpoint did not return valid JSON with a URL" 
+              },
+              { status: 500 }
+            );
+          }
+        } else {
+          // Xử lý trường hợp error response
+          log(`Download endpoint returned error status: ${response.status}`);
+          const errorData = await response.json().catch(() => ({
+            success: false,
+            message: `Download failed with status ${response.status}`
+          }));
+          
+          return NextResponse.json(errorData, {
+            status: response.status,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
 
       // Xử lý khi token hết hạn (401)
       if (response.status === 401 && refreshToken) {
-        console.log("[API Proxy] Received 401, attempting to refresh token");
+        log("Received 401, attempting to refresh token");
         const refreshResult = await refreshTokenAction(refreshToken);
 
         if (refreshResult.success && refreshResult.newToken) {
           // Thử lại request với token mới
           headers.set("Authorization", `Bearer ${refreshResult.newToken}`);
-          console.log("[API Proxy] Retrying with new token");
+          log("Retrying with new token");
 
           const retryResponse = await fetch(apiUrl, {
             method,
@@ -209,19 +331,20 @@ async function handleApiRequest(
           });
         } else {
           // Nếu refresh token cũng thất bại, trả về lỗi 401
-          console.error("[API Proxy] Failed to refresh token");
+          log("Failed to refresh token");
         }
       }
 
-      // Trả về response từ backend API
-      const responseData = await response.json().catch(() => ({}));
-
-      return NextResponse.json(responseData, {
-        status: response.status,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      // Trả về response từ backend API (cho các endpoint không phải processing-status hoặc download)
+      if (!isProcessingStatusEndpoint && !isDownloadEndpoint) {
+        const responseData = await response.json().catch(() => ({}));
+        return NextResponse.json(responseData, {
+          status: response.status,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
     }
 
     // Thêm return mặc định cho TypeScript
@@ -233,7 +356,7 @@ async function handleApiRequest(
       { status: 500 }
     );
   } catch (error) {
-    console.error("[API Proxy Error]", error);
+    log("API Proxy Error", error);
     return NextResponse.json(
       {
         success: false,

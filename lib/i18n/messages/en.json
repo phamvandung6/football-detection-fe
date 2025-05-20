@@ -6,6 +6,7 @@
   },
   "common": {
     "actions": "Actions",
+    "clearSelection": "Clear Selection",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
@@ -99,7 +100,25 @@
     "invalidEmail": "Invalid email address",
     "loginError": "An error occurred during login",
     "registerError": "An error occurred during registration",
-    "registerFailed": "Registration failed"
+    "registerFailed": "Registration failed",
+    "passwordWeak": "Weak",
+    "passwordMedium": "Medium",
+    "passwordStrong": "Strong",
+    "passwordStrength": "Password strength",
+    "passwordMinLength": "At least 6 characters",
+    "passwordUppercase": "At least 1 uppercase letter",
+    "passwordNumber": "At least 1 number",
+    "passwordSpecialChar": "At least 1 special character",
+    "optional": "(optional)",
+    "passwordStrengthNote": "Password only requires 6 characters minimum, but adding other elements makes your account more secure.",
+    "registerDescription": "Create a new account to use the application",
+    "namePlaceholder": "Your full name",
+    "emailPlaceholder": "email@example.com",
+    "usernamePlaceholder": "Choose a username",
+    "passwordPlaceholder": "At least 6 characters",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "emailAlreadyExists": "Email is already in use",
+    "usernameAlreadyExists": "Username is already in use"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -169,6 +188,7 @@
   },
   "videos": {
     "title": "Videos",
+    "type": "Type",
     "subtitle": "Browse and manage your videos",
     "description": "View all your uploaded and processed videos"
   },
@@ -188,7 +208,6 @@
     "exitFullscreen": "Exit Fullscreen",
     "loading": "Loading...",
     "share": "Share",
-    "download": "Download",
     "like": "Like",
     "unlike": "Unlike",
     "upload": {
@@ -244,6 +263,8 @@
   "videoDetails": {
     "title": "Title",
     "description": "Description",
+    "retryStream": "Retry Stream",
+    "streamNotAvailable": "Stream not available",
     "uploadDate": "Upload Date",
     "views": "views",
     "followers": "followers",
@@ -295,7 +316,12 @@
       "processing": "Processing",
       "completed": "Completed",
       "failed": "Failed"
-    }
+    },
+    "statusQueued": "Queued",
+    "statusProcessing": "Processing",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "statusPending": "Pending"
   },
   "admin": {
     "title": "Admin Dashboard",

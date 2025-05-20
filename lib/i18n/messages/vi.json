@@ -6,6 +6,7 @@
   },
   "common": {
     "actions": "Hành động",
+    "clearSelection": "Xóa bỏ chọn lựa",
     "loading": "Đang tải...",
     "error": "Lỗi",
     "success": "Thành công",
@@ -100,7 +101,25 @@
     "invalidEmail": "Email không hợp lệ",
     "loginError": "Đã xảy ra lỗi khi đăng nhập",
     "registerError": "Đã xảy ra lỗi khi đăng ký",
-    "registerFailed": "Đăng ký thất bại"
+    "registerFailed": "Đăng ký thất bại",
+    "passwordWeak": "Yếu",
+    "passwordMedium": "Trung bình",
+    "passwordStrong": "Mạnh",
+    "passwordStrength": "Độ mạnh mật khẩu",
+    "passwordMinLength": "Ít nhất 6 ký tự",
+    "passwordUppercase": "Ít nhất 1 chữ hoa",
+    "passwordNumber": "Ít nhất 1 chữ số",
+    "passwordSpecialChar": "Ít nhất 1 ký tự đặc biệt",
+    "optional": "(không bắt buộc)",
+    "passwordStrengthNote": "Mật khẩu chỉ cần tối thiểu 6 ký tự, nhưng thêm các yếu tố khác sẽ giúp tài khoản của bạn an toàn hơn.",
+    "registerDescription": "Tạo tài khoản mới để sử dụng ứng dụng",
+    "namePlaceholder": "Họ và tên của bạn",
+    "emailPlaceholder": "email@example.com",
+    "usernamePlaceholder": "Chọn tên đăng nhập",
+    "passwordPlaceholder": "Ít nhất 6 ký tự",
+    "confirmPasswordPlaceholder": "Xác nhận mật khẩu của bạn",
+    "emailAlreadyExists": "Email đã được sử dụng",
+    "usernameAlreadyExists": "Tên đăng nhập đã được sử dụng"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -170,6 +189,7 @@
   },
   "videos": {
     "title": "Video",
+    "type": "Loại",
     "subtitle": "Duyệt và quản lý video của bạn",
     "description": "Xem tất cả video đã tải lên và đã xử lý của bạn"
   },
@@ -189,7 +209,6 @@
     "exitFullscreen": "Thoát toàn màn hình",
     "loading": "Đang tải...",
     "share": "Chia sẻ",
-    "download": "Tải xuống",
     "like": "Thích",
     "unlike": "Bỏ thích",
     "upload": {
@@ -246,6 +265,8 @@
   "videoDetails": {
     "title": "Tiêu đề",
     "description": "Mô tả",
+    "retryStream": "Thử lại",
+    "streamNotAvailable": "Video không tồn tại",
     "uploadDate": "Ngày tải lên",
     "views": "lượt xem",
     "followers": "người theo dõi",
@@ -307,7 +328,12 @@
     "detectionsError": "Lỗi khi tải kết quả phát hiện",
     "activeDetections": "Phát hiện đang hoạt động",
     "noActiveDetections": "Không có phát hiện nào tại thời điểm này",
-    "jumpTo": "Nhảy đến"
+    "jumpTo": "Nhảy đến",
+    "statusQueued": "Đang chờ trong hàng đợi",
+    "statusProcessing": "Đang xử lý",
+    "statusCompleted": "Đã hoàn thành",
+    "statusFailed": "Thất bại",
+    "statusPending": "Đang chờ"
   },
   "admin": {
     "title": "Bảng điều khiển quản trị",

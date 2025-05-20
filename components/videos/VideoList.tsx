@@ -1,24 +1,32 @@
 "use client";
 
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useVideoProcessingManager } from "@/lib/hooks/useVideoProcessingManager";
+import { useVideoProcessing } from "@/lib/hooks/useVideoProcessing";
 import { useDeleteVideo, useVideos } from "@/lib/hooks/useVideoQueries";
-import { Video } from "@/types/video";
+import { Video, VideoStatus } from "@/types/video";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { VideoCard } from "./VideoCard";
+
+// Interface ProcessingStatusData phù hợp với VideoCard
+interface ProcessingStatusData {
+  displayStatus: VideoStatus;
+  progress?: number;
+  message?: string;
+  isProcessing: boolean;
+}
 
 interface VideoListProps {
   locale: string;
@@ -26,23 +34,31 @@ interface VideoListProps {
 
 export function VideoList({ locale }: VideoListProps) {
   const t = useTranslations();
-  const { data: videos, isLoading, error: fetchError, refetch: refetchVideos } = useVideos();
-  const { getCombinedVideoData, processingStatuses } = useVideoProcessingManager();
+  const {
+    data: videos,
+    isLoading,
+    error: fetchError,
+    refetch: refetchVideos,
+  } = useVideos();
 
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    const justCompletedVideo = Object.values(processingStatuses).find(status => status.status === 'READY');
-    if (justCompletedVideo) {
-    }
-  }, [processingStatuses, refetchVideos]);
+  // Sử dụng hook useVideoProcessing để lấy trạng thái của tất cả các video
+  const { processingVideos = [], getVideoStatus } = useVideoProcessing();
+
+  // Chuyển đổi mảng processingVideos thành record để tìm kiếm nhanh hơn
+  const processingVideoMap = processingVideos.reduce((acc, video) => {
+    acc[video.videoId] = video;
+    return acc;
+  }, {} as Record<string, (typeof processingVideos)[number]>);
 
   const deleteMutation = useDeleteVideo({
     onSuccess: () => {
       toast.success(t("video.delete.success"));
       setShowDeleteDialog(false);
       setVideoToDelete(null);
+      refetchVideos();
     },
     onError: (error) => {
       toast.error(error.message || t("video.delete.error"));
@@ -107,7 +123,21 @@ export function VideoList({ locale }: VideoListProps) {
     <div className="space-y-4">
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {videos.map((video) => {
-          const processingStatusData = getCombinedVideoData(video);
+          // Kiểm tra xem video có đang được xử lý không (từ store Zustand)
+          const processingData = processingVideoMap[video.id];
+
+          // Tạo ProcessingStatusData phù hợp với định nghĩa
+          const processingStatusData: ProcessingStatusData = {
+            displayStatus: processingData?.status || video.status,
+            progress: processingData?.progress,
+            message: processingData?.message,
+            isProcessing: !!(
+              processingData &&
+              (processingData.status === "PROCESSING" ||
+                processingData.status === "PENDING")
+            ),
+          };
+
           return (
             <VideoCard
               key={video.id}

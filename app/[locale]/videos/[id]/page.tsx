@@ -5,10 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VideoDetailsCard } from "@/components/videos/VideoDetailsCard";
 import { VideoPlayer } from "@/components/videos/VideoPlayer";
-import { getVideoDownloadUrl, getVideoStreamUrl, refreshVideoStreamUrl } from "@/lib/api/videoService";
+import {
+  getVideoDownloadUrl,
+  getVideoStreamUrl,
+  refreshVideoStreamUrl,
+} from "@/lib/api/videoService";
 import { useAuthSession } from "@/lib/auth/useAuthSession";
 import { useVideo } from "@/lib/hooks/useVideoQueries";
-import { CheckCircle, Download, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,8 +27,12 @@ interface VideoPageProps {
 
 export default function VideoPage({ params }: VideoPageProps) {
   const params2 = useParams();
-  const id = typeof params2.id === 'string' ? params2.id : (params2.id as string[])[0];
-  const locale = typeof params2.locale === 'string' ? params2.locale : (params2.locale as string[])[0];
+  const id =
+    typeof params2.id === "string" ? params2.id : (params2.id as string[])[0];
+  const locale =
+    typeof params2.locale === "string"
+      ? params2.locale
+      : (params2.locale as string[])[0];
   const t = useTranslations();
   const router = useRouter();
   const { session } = useAuthSession();
@@ -48,10 +56,10 @@ export default function VideoPage({ params }: VideoPageProps) {
   useEffect(() => {
     const fetchStreamUrl = async () => {
       if (!video) return;
-      
+
       // Kiểm tra cả READY và COMPLETED
-      if (video.status !== "READY" && video.status !== "COMPLETED") return;
-      
+      if (video.status !== "COMPLETED") return;
+
       try {
         setIsLoadingStream(true);
         const streamData = await getVideoStreamUrl(video.id);
@@ -59,7 +67,7 @@ export default function VideoPage({ params }: VideoPageProps) {
           setStreamInfo({
             url: streamData.url,
             expiresAt: streamData.expiresAt,
-            title: streamData.title
+            title: streamData.title,
           });
         }
       } catch (error) {
@@ -69,22 +77,22 @@ export default function VideoPage({ params }: VideoPageProps) {
         setIsLoadingStream(false);
       }
     };
-    
+
     fetchStreamUrl();
   }, [video, t]);
 
   // Refresh URL khi cần thiết (ví dụ: khi người dùng click nút refresh)
   const handleRefreshStreamUrl = async () => {
     if (!video) return;
-    
+
     try {
       setIsLoadingStream(true);
       const refreshedData = await refreshVideoStreamUrl(video.id);
       if (refreshedData) {
-        setStreamInfo(prev => ({
+        setStreamInfo((prev) => ({
           ...prev!,
           url: refreshedData.url,
-          expiresAt: refreshedData.expiresAt
+          expiresAt: refreshedData.expiresAt,
         }));
         toast.success(t("videoDetails.streamRefreshed"));
       }
@@ -147,7 +155,7 @@ export default function VideoPage({ params }: VideoPageProps) {
           <div className="flex items-center p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-6">
             <Loader2 className="h-5 w-5 mr-3 text-yellow-600 animate-spin" />
             <span className="text-yellow-800 dark:text-yellow-300 font-medium">
-              {t("videoStatus.pendingDescription")}
+              {t("videoDetails.status.pending")}
             </span>
           </div>
         );
@@ -157,26 +165,25 @@ export default function VideoPage({ params }: VideoPageProps) {
           <div className="flex items-center p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
             <Loader2 className="h-5 w-5 mr-3 text-blue-600 animate-spin" />
             <span className="text-blue-800 dark:text-blue-300 font-medium">
-              {t("videoStatus.processingDescription", { progress })}
+              {t("videoDetails.status.processing")}
             </span>
           </div>
         );
-      case "READY":
       case "COMPLETED":
         return (
           <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg mb-6">
             <CheckCircle className="h-5 w-5 mr-3 text-green-600" />
             <span className="text-green-800 dark:text-green-300 font-medium">
-              {t("videoStatus.completedDescription")}
+              {t("videoDetails.status.completed")}
             </span>
           </div>
         );
-      case "FAILED":
+      case "ERROR":
         return (
           <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg mb-6">
             <XCircle className="h-5 w-5 mr-3 text-red-600" />
             <span className="text-red-800 dark:text-red-300 font-medium">
-              {t("videoStatus.failedDescription")}:
+              {t("videoDetails.status.failed")}:
               <span className="ml-1 italic">
                 {video.error_message || t("common.unknownError")}
               </span>
@@ -195,29 +202,32 @@ export default function VideoPage({ params }: VideoPageProps) {
     const toastId = toast.loading(t("video.download.downloading"));
 
     try {
+      console.log("Đang lấy URL download...");
       const downloadUrl = await getVideoDownloadUrl(video.id, processed);
+      console.log("Nhận được URL download:", downloadUrl);
 
-      const response = await fetch(downloadUrl, { cache: "no-store" });
-
-      if (!response.ok) {
-        throw new Error(
-          `Download failed: ${response.statusText || response.status}`
-        );
+      if (
+        !downloadUrl ||
+        typeof downloadUrl !== "string" ||
+        !downloadUrl.startsWith("http")
+      ) {
+        throw new Error("URL tải xuống không hợp lệ");
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const filename = video.title ? video.title.replace(/[^a-z0-9_.-]/gi, '_') : video.id;
-      const extension = processed ? (video.processedPath?.split('.').pop() || 'mp4') : (video.filePath?.split('.').pop() || 'mp4');
-      a.download = processed
-        ? `processed_${filename}.${extension}`
-        : `${filename}.${extension}`;
-      document.body.appendChild(a);
-      a.click();
-      toast.success(t("video.download.downloadSuccess"), { id: toastId });
-      window.URL.revokeObjectURL(url);
-      a.remove();
+
+      // Mở URL trong iframe ẩn để tải xuống mà không bị chặn bởi CORS
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = downloadUrl;
+      document.body.appendChild(iframe);
+
+      // Thiết lập timeout để xóa iframe sau khi đã bắt đầu tải xuống
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 5000);
+
+      toast.success(t("video.download.success"), { id: toastId });
     } catch (error) {
       console.error("Download error:", error);
       toast.error(
@@ -236,64 +246,43 @@ export default function VideoPage({ params }: VideoPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
-            <h1 className="text-2xl md:text-3xl font-bold break-words mr-4">
+            <h1 className="text-2xl md:text-3xl font-bold break-words">
               {video.title || t("videoDetails.untitled")}
             </h1>
-            {video.isDownloadable && (video.status === "READY" || video.status === "COMPLETED") && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
-                <Button
-                  onClick={() => handleDownload(false)}
-                  disabled={isDownloading}
-                  variant="outline"
-                  size="sm"
-                >
-                  {isDownloading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  {t("video.download.original")}
-                </Button>
-                {video.processedPath && (
-                  <Button
-                    onClick={() => handleDownload(true)}
-                    disabled={isDownloading}
-                    size="sm"
-                  >
-                    {isDownloading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {t("video.download.processed")}
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
 
           {renderStatusInfo()}
 
           <Card>
             <CardContent className="p-0 aspect-video bg-black rounded-lg overflow-hidden">
-              {(video.status === "READY" || video.status === "COMPLETED") && streamInfo ? (
+              {video.status === "COMPLETED" && streamInfo ? (
                 <VideoPlayer
                   videoUrl={streamInfo.url}
                   title={video.title || "Video"}
-                  onRefreshStream={(video.status === "READY" || video.status === "COMPLETED") ? handleRefreshStreamUrl : undefined}
+                  onRefreshStream={
+                    video.status === "COMPLETED"
+                      ? handleRefreshStreamUrl
+                      : undefined
+                  }
                   isLoadingStream={isLoadingStream}
                 />
-              ) : video.status === "PROCESSING" || video.status === "PENDING" ? (
+              ) : video.status === "PROCESSING" ||
+                video.status === "PENDING" ? (
                 <div className="w-full aspect-video flex flex-col items-center justify-center bg-muted/50">
                   <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
                   <p className="text-muted-foreground">
-                    {video.status === "PENDING" ? t("videoStatus.pendingDescription") : t("videoStatus.processingShort")}
+                    {video.status === "PENDING"
+                      ? t("videoStatus.pendingDescription")
+                      : t("videoStatus.processingShort")}
                   </p>
-                  {video.status === "PROCESSING" && video.progress !== undefined && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {t("videoStatus.progress", { progress: video.progress.toFixed(0) })}
-                    </p>
-                  )}
+                  {video.status === "PROCESSING" &&
+                    video.progress !== undefined && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t("videoStatus.progress", {
+                          progress: video.progress.toFixed(0),
+                        })}
+                      </p>
+                    )}
                 </div>
               ) : (
                 <div className="w-full aspect-video flex flex-col items-center justify-center bg-destructive/10">
@@ -301,16 +290,23 @@ export default function VideoPage({ params }: VideoPageProps) {
                   <p className="text-destructive-foreground">
                     {t("videoDetails.streamNotAvailable")}
                   </p>
-                  {video.status === "FAILED" && video.error_message && (
-                     <p className="text-xs text-destructive-foreground/80 mt-1">
-                       {video.error_message}
-                     </p>
+                  {video.status === "ERROR" && video.error_message && (
+                    <p className="text-xs text-destructive-foreground/80 mt-1">
+                      {video.error_message}
+                    </p>
                   )}
-                  {(video.status === "READY" || video.status === "COMPLETED") && !streamInfo && !isLoadingStream && (
-                    <Button onClick={handleRefreshStreamUrl} variant="ghost" size="sm" className="mt-4">
-                      {t("videoDetails.retryStream")}
-                    </Button>
-                  )}
+                  {video.status === "COMPLETED" &&
+                    !streamInfo &&
+                    !isLoadingStream && (
+                      <Button
+                        onClick={handleRefreshStreamUrl}
+                        variant="ghost"
+                        size="sm"
+                        className="mt-4"
+                      >
+                        {t("videoDetails.retryStream")}
+                      </Button>
+                    )}
                 </div>
               )}
             </CardContent>

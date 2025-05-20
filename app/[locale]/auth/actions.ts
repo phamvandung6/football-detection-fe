@@ -142,7 +142,11 @@ export async function registerAction(
     username: z.string().min(3, t("usernameTooShort")),
     email: z.string().email(t("invalidEmail")),
     password: z.string().min(6, t("passwordTooShort")),
+    confirmPassword: z.string(),
     name: z.string().min(1, t("nameRequired")),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t("passwordsDoNotMatch"),
+    path: ["confirmPassword"],
   });
 
   // Xác thực dữ liệu
@@ -172,6 +176,24 @@ export async function registerAction(
     const data = await response.json();
 
     if (!response.ok || !data.success) {
+      // Xử lý lỗi từ API một cách chi tiết hơn
+      if (data.message === "Email already exists") {
+        return {
+          success: false,
+          message: t("emailAlreadyExists") || "Email đã được sử dụng",
+          errors: {
+            email: [t("emailAlreadyExists") || "Email đã được sử dụng"],
+          },
+        };
+      } else if (data.message === "Username already exists") {
+        return {
+          success: false,
+          message: t("usernameAlreadyExists") || "Tên đăng nhập đã được sử dụng",
+          errors: {
+            username: [t("usernameAlreadyExists") || "Tên đăng nhập đã được sử dụng"],
+          },
+        };
+      }
       throw new Error(data.message || t("registerFailed"));
     }
 
@@ -184,7 +206,7 @@ export async function registerAction(
     // Tạo response với header đặc biệt để client-side có thể phát hiện và invalidate query
     const authResult = {
       success: true,
-      message: "Registration successful",
+      message: t("registerSuccess"),
       shouldInvalidateQueries: true,
     };
     

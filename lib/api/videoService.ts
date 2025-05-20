@@ -362,20 +362,83 @@ export async function getVideoDetections(id: string): Promise<Detection[]> {
  */
 export async function getVideoDownloadUrl(
   id: string,
-  processed: boolean = false
+  processed: boolean = false,
+  expirationMinutes: number = 30
 ): Promise<string> {
   try {
     const endpoint = processed
-      ? `/videos/${id}/download/processed`
-      : `/videos/${id}/download`;
+      ? `/videos/${id}/download/processed?expirationMinutes=${expirationMinutes}`
+      : `/videos/${id}/download/original?expirationMinutes=${expirationMinutes}`;
 
-    const { data } = await apiClient.get<string>(endpoint);
-    return data;
-  } catch (error) {
+    console.log(`[Video Service] Đang gọi API: ${endpoint}`);
+    
+    // Log để debug nhưng không ảnh hưởng đến luồng chính
+    setTimeout(() => {
+      try {
+        console.log(`[Video Service Debug] API Client configs:`, {
+          baseURL: apiClient.defaults?.baseURL,
+          timeout: apiClient.defaults?.timeout,
+          headers: apiClient.defaults?.headers
+        });
+      } catch (e) {
+        // Bỏ qua lỗi trong debug log
+      }
+    }, 0);
+    
+    // Bắt đầu gọi API
+    console.log(`[Video Service] Bắt đầu request`);
+    const response = await apiClient.get<string>(endpoint);
+    console.log(`[Video Service] Nhận được response:`, response);
+    
+    // Kiểm tra nếu response có dữ liệu URL
+    if (response.data && typeof response.data === 'string') {
+      console.log(`[Video Service] URL download hợp lệ:`, response.data);
+      return response.data;
+    }
+    
+    // Trường hợp không phải là string nhưng có thể là object
+    if (response.data && typeof response.data === 'object') {
+      console.log(`[Video Service] Response không phải là URL trực tiếp, đang kiểm tra object:`, response.data);
+      
+      // Kiểm tra nếu response.data có trường url
+      const dataObj = response.data as any;
+      if (dataObj.url && typeof dataObj.url === 'string') {
+        console.log(`[Video Service] Tìm thấy URL trong response.data.url:`, dataObj.url);
+        return dataObj.url;
+      }
+      
+      // Kiểm tra nếu response.data có trường data (có thể là nested ApiResponse)
+      if (dataObj.data && typeof dataObj.data === 'string') {
+        console.log(`[Video Service] Tìm thấy URL trong response.data.data:`, dataObj.data);
+        return dataObj.data;
+      }
+    }
+    
+    console.error(`[Video Service] Không tìm thấy URL download trong response:`, response.data);
+    throw new Error("Không thể lấy URL download video: URL không hợp lệ");
+
+  } catch (error: any) {
     console.error(
-      `[Video Service] Error getting download URL for video ${id}:`,
+      `[Video Service] Lỗi khi lấy URL download cho video ${id}:`,
       error
     );
-    throw new Error("Không thể lấy URL download video");
+    
+    // Log thêm chi tiết lỗi
+    if (error.response) {
+      console.error(`[Video Service] Chi tiết lỗi API cho ${id}:`, {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    } else if (error.request) {
+      console.error(`[Video Service] Request đã gửi nhưng không nhận được response:`, error.request);
+    }
+    
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      "Không thể lấy URL download video"
+    );
   }
 }

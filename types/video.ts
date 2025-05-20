@@ -19,9 +19,8 @@ export interface VideoMetadata {
 export type VideoStatus =
   | "PENDING"
   | "PROCESSING"
-  | "READY"
   | "COMPLETED"
-  | "FAILED";
+  | "ERROR";
 
 // Định nghĩa loại video
 export type VideoType = "UPLOADED" | "YOUTUBE";

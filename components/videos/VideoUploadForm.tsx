@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { useVideoProcessingManager } from "@/lib/hooks/useVideoProcessingManager";
+import { useVideoProcessing } from "@/lib/hooks/useVideoProcessing";
 import { useUploadVideo } from "@/lib/hooks/useVideoQueries";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { VideoDropzone } from "./VideoDropzone";
 
@@ -18,7 +18,10 @@ interface VideoUploadFormProps {
   onVideoUploaded?: () => void;
 }
 
-export function VideoUploadForm({ locale, onVideoUploaded }: VideoUploadFormProps) {
+export function VideoUploadForm({
+  locale,
+  onVideoUploaded,
+}: VideoUploadFormProps) {
   const t = useTranslations();
 
   const [title, setTitle] = useState("");
@@ -26,43 +29,46 @@ export function VideoUploadForm({ locale, onVideoUploaded }: VideoUploadFormProp
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  const { addTrackedVideo } = useVideoProcessingManager();
+
+  // Sử dụng hook useVideoProcessing
+  const { addVideo } = useVideoProcessing();
 
   const uploadMutation = useUploadVideo({
     onSuccess: (data) => {
       console.log("[VideoUploadForm] onSuccess data:", data);
       if (data && data.videoId) {
         console.log("[VideoUploadForm] Video ID found:", data.videoId);
-        addTrackedVideo(data.videoId);
-        
+
+        // Thêm video vào store thông qua hook useVideoProcessing
+        addVideo(data.videoId, title);
+
         toast.info(t("video.upload.processingStarted"), {
           duration: 5000,
         });
-        
+
         if (onVideoUploaded) {
           setTimeout(() => {
             onVideoUploaded();
-          }, 1500); 
+          }, 1500);
         }
       } else {
-        console.warn("[VideoUploadForm] No videoId in onSuccess data or data is null. Data:", data);
+        console.warn(
+          "[VideoUploadForm] No videoId in onSuccess data or data is null. Data:",
+          data
+        );
         if (data && data.message) {
           toast.success(data.message || t("video.upload.uploadSuccess"));
         } else {
           toast.success(t("video.upload.uploadSuccess"));
         }
       }
-      
+
       if (data && data.videoId) {
+        // Reset form sau khi upload thành công
         setTitle("");
         setDescription("");
         setSelectedFile(null);
         setUploadProgress(0);
-      } else if (!data || !data.videoId) {
-        // Có thể chỉ reset progress nếu upload có vẻ thành công nhưng thiếu videoId
-        // setUploadProgress(0); 
-        // Hoặc không reset gì cả để người dùng thấy rõ hơn
       }
     },
     onError: (error) => {
@@ -88,11 +94,42 @@ export function VideoUploadForm({ locale, onVideoUploaded }: VideoUploadFormProp
     }
   };
 
+  // Lắng nghe sự kiện validation lỗi
+  useEffect(() => {
+    const handleVideoValidationError = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.message) {
+        toast.error(customEvent.detail.message);
+        setErrors((prev) => ({ ...prev, file: customEvent.detail.message }));
+      }
+    };
+
+    window.addEventListener(
+      "video-validation-error",
+      handleVideoValidationError
+    );
+
+    return () => {
+      window.removeEventListener(
+        "video-validation-error",
+        handleVideoValidationError
+      );
+    };
+  }, []);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = t("video.upload.titleRequired");
     if (!selectedFile) newErrors.file = t("video.upload.noFileSelected");
-    if (errors.file && !selectedFile) newErrors.file = errors.file;
+
+    // Kiểm tra định dạng file
+    if (
+      selectedFile &&
+      !selectedFile.type.includes("mp4") &&
+      !selectedFile.type.includes("video/mp4")
+    ) {
+      newErrors.file = t("video.upload.onlyMP4Allowed");
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -137,7 +174,9 @@ export function VideoUploadForm({ locale, onVideoUploaded }: VideoUploadFormProp
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">{t("videoDetails.description")}</Label>
+              <Label htmlFor="description">
+                {t("videoDetails.description")}
+              </Label>
               <Textarea
                 id="description"
                 value={description}

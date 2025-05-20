@@ -4,16 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Video, VideoStatus } from "@/types/video";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, vi } from "date-fns/locale";
-import { AlertTriangle, Calendar, CheckCircle, FileVideo, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  FileVideo,
+  Loader2,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
@@ -46,30 +54,34 @@ export function VideoCard({
 
   const renderStatusBadge = (status: VideoStatus, currentProgress?: number) => {
     let badgeText = "";
-    let badgeVariant: "outline" | "secondary" | "destructive" | "default" = "outline";
+    let badgeVariant: "outline" | "secondary" | "destructive" | "default" =
+      "outline";
     let className = "";
     let icon = null;
 
     switch (status) {
       case "PENDING":
         badgeText = t("videoStatus.pending");
-        className = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+        className =
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
         icon = <AlertTriangle className="mr-1 h-3.5 w-3.5" />;
         break;
       case "PROCESSING":
         badgeText = t("videoStatus.processing");
-        if (typeof currentProgress === 'number') {
+        if (typeof currentProgress === "number") {
           badgeText += ` (${currentProgress}%)`;
         }
-        className = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+        className =
+          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
         icon = <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />;
         break;
-      case "READY":
+      case "COMPLETED":
         badgeText = t("videoStatus.completed");
-        className = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+        className =
+          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
         icon = <CheckCircle className="mr-1 h-3.5 w-3.5" />;
         break;
-      case "FAILED":
+      case "ERROR":
         badgeText = t("videoStatus.failed");
         className = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
         badgeVariant = "destructive";
@@ -94,13 +106,20 @@ export function VideoCard({
           <p className="text-white text-sm font-medium mb-2">
             {t("videoStatus.processingDetailed", { progress: progress ?? 0 })}
           </p>
-          {typeof progress === 'number' && (
-            <Progress value={progress} className="w-3/4 h-2 bg-white/30 [&>div]:bg-white" />
+          {typeof progress === "number" && (
+            <Progress
+              value={progress}
+              className="w-3/4 h-2 bg-white/30 [&>div]:bg-white"
+            />
           )}
         </div>
       )}
 
-      <div className={`aspect-video relative bg-muted flex-shrink-0 ${isProcessing && displayStatus === "PROCESSING" ? 'filter blur-sm' : ''}`}>
+      <div
+        className={`aspect-video relative bg-muted flex-shrink-0 ${
+          isProcessing && displayStatus === "PROCESSING" ? "filter blur-sm" : ""
+        }`}
+      >
         <Link
           href={`/${locale}/videos/${video.id}`}
           className="block w-full h-full group"
@@ -130,7 +149,9 @@ export function VideoCard({
                 variant="secondary"
                 size="icon"
                 className="h-8 w-8 rounded-full opacity-80 hover:opacity-100 focus:opacity-100 transition-opacity"
-                disabled={isDeleting || (isProcessing && displayStatus === "PROCESSING")}
+                disabled={
+                  isDeleting || (isProcessing && displayStatus === "PROCESSING")
+                }
                 aria-label={t("common.actions")}
               >
                 <MoreVertical className="h-4 w-4" />
@@ -144,7 +165,9 @@ export function VideoCard({
                   e.stopPropagation();
                   onDeleteClick(video);
                 }}
-                disabled={isDeleting || (isProcessing && displayStatus === "PROCESSING")}
+                disabled={
+                  isDeleting || (isProcessing && displayStatus === "PROCESSING")
+                }
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {isDeleting ? t("common.deleting") : t("common.delete")}
@@ -164,9 +187,9 @@ export function VideoCard({
                 : "hover:text-primary"
             }`}
             onClick={(e) => {
-                if (isProcessing && displayStatus === "PROCESSING") {
-                  e.preventDefault();
-                }
+              if (isProcessing && displayStatus === "PROCESSING") {
+                e.preventDefault();
+              }
             }}
           >
             {video.title}

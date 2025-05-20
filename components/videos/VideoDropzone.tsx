@@ -35,9 +35,65 @@ export function VideoDropzone({
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    onFileSelect(file || null);
+    if (file) {
+      // Kiểm tra loại file
+      if (!file.type.includes("mp4") && !file.type.includes("video/mp4")) {
+        onFileSelect(null);
+        // Hiển thị lỗi
+        const customEvent = new CustomEvent("video-validation-error", {
+          detail: { message: t("video.upload.onlyMP4Allowed") },
+        });
+        window.dispatchEvent(customEvent);
+        return;
+      }
+
+      try {
+        // Kiểm tra thời lượng video
+        const duration = await getVideoDuration(file);
+        // Giới hạn 30 phút (1800 giây)
+        if (duration > 1800) {
+          onFileSelect(null);
+          // Hiển thị lỗi
+          const customEvent = new CustomEvent("video-validation-error", {
+            detail: {
+              message: t("video.upload.maxDurationExceeded", { minutes: 30 }),
+            },
+          });
+          window.dispatchEvent(customEvent);
+          return;
+        }
+
+        // Nếu mọi thứ OK, chấp nhận file
+        onFileSelect(file);
+      } catch (error) {
+        console.error("Error checking video duration:", error);
+        // Vẫn chấp nhận file nếu không kiểm tra được thời lượng
+        onFileSelect(file);
+      }
+    } else {
+      onFileSelect(null);
+    }
+  };
+
+  // Hàm lấy thời lượng video
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve(video.duration);
+      };
+
+      video.onerror = (e) => {
+        reject(e);
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -52,17 +108,46 @@ export function VideoDropzone({
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.includes("video/")) {
-      onFileSelect(file);
+    if (file) {
+      // Kiểm tra định dạng file
+      if (!file.type.includes("mp4") && !file.type.includes("video/mp4")) {
+        // Hiển thị lỗi
+        const customEvent = new CustomEvent("video-validation-error", {
+          detail: { message: t("video.upload.onlyMP4Allowed") },
+        });
+        window.dispatchEvent(customEvent);
+        return;
+      }
+
+      try {
+        // Kiểm tra thời lượng video
+        const duration = await getVideoDuration(file);
+        // Giới hạn 30 phút (1800 giây)
+        if (duration > 1800) {
+          // Hiển thị lỗi
+          const customEvent = new CustomEvent("video-validation-error", {
+            detail: {
+              message: t("video.upload.maxDurationExceeded", { minutes: 30 }),
+            },
+          });
+          window.dispatchEvent(customEvent);
+          return;
+        }
+
+        // Nếu mọi thứ OK, chấp nhận file
+        onFileSelect(file);
+      } catch (error) {
+        console.error("Error checking video duration:", error);
+        // Vẫn chấp nhận file nếu không kiểm tra được thời lượng
+        onFileSelect(file);
+      }
     } else {
-      // Có thể thêm toast thông báo lỗi ở đây nếu muốn
-      console.warn("Invalid file type dropped");
-      onFileSelect(null); // Hoặc không làm gì cả
+      onFileSelect(null);
     }
   };
 
